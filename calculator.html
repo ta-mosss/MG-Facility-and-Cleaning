@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MG Cleaning Price Calculator | Instant Quote Estimator</title>
+  
+  <meta name="description" content="Calculate your cleaning cost instantly. Select services and get a rough estimate. Final quote confirmed by our team.">
+  <meta name="robots" content="index, follow">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #f5f5f5 0%, #fff 100%);
+      min-height: 100vh;
+    }
+    
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #B8860B 100%);
+      color: white;
+      padding: 40px 0;
+      text-align: center;
+    }
+    
+    .header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+    }
+    
+    .header h1 span {
+      color: #D4AF37;
+    }
+    
+    .header p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+    
+    /* Calculator Grid */
+    .calculator-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+    }
+    
+    /* Service Selection Panel */
+    .services-panel {
+      background: white;
+      border-radius: 24px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+    
+    .services-panel h3 {
+      font-size: 1.5rem;
+      margin-bottom: 24px;
+      color: #0a0a0a;
+      border-left: 4px solid #B8860B;
+      padding-left: 15px;
+    }
+    
+    .service-category {
+      margin-bottom: 30px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 20px;
+    }
+    
+    .service-category h4 {
+      color: #B8860B;
+      margin-bottom: 15px;
+      font-size: 1.1rem;
+    }
+    
+    .service-category h4 i {
+      margin-right: 10px;
+    }
+    
+    .service-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    
+    .service-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      padding: 8px 12px;
+      background: #f8f8f8;
+      border-radius: 10px;
+      transition: all 0.3s;
+    }
+    
+    .service-label:hover {
+      background: #f0f0f0;
+    }
+    
+    .service-label input {
+      cursor: pointer;
+      accent-color: #B8860B;
+    }
+    
+    .service-label span {
+      font-size: 14px;
+      flex: 1;
+    }
+    
+    .service-label .price {
+      color: #B8860B;
+      font-weight: 600;
+      font-size: 12px;
+    }
+    
+    .flex-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    .flex-row label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 8px 16px;
+      background: #f8f8f8;
+      border-radius: 30px;
+      transition: all 0.3s;
+    }
+    
+    .flex-row label:hover {
+      background: #f0f0f0;
+    }
+    
+    .flex-row input {
+      cursor: pointer;
+      accent-color: #B8860B;
+    }
+    
+    /* Price Summary Panel */
+    .summary-panel {
+      background: linear-gradient(135deg, #0a0a0a, #1a1a1a);
+      border-radius: 24px;
+      padding: 30px;
+      color: white;
+      box-shadow: 0 10px 40px rgba(184,134,11,0.2);
+      position: sticky;
+      top: 20px;
+      height: fit-content;
+    }
+    
+    .summary-panel h3 {
+      font-size: 1.5rem;
+      margin-bottom: 24px;
+      color: #D4AF37;
+    }
+    
+    .price-breakdown {
+      background: rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    
+    .price-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .price-row.total {
+      border-bottom: none;
+      padding-top: 15px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #D4AF37;
+    }
+    
+    .estimate-note {
+      font-size: 12px;
+      color: rgba(255,255,255,0.6);
+      margin-top: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    /* Quote Form */
+    .quote-form {
+      margin-top: 24px;
+    }
+    
+    .quote-form h4 {
+      margin-bottom: 15px;
+      font-size: 1.1rem;
+    }
+    
+    .quote-form input,
+    .quote-form textarea {
+      width: 100%;
+      padding: 12px 15px;
+      margin-bottom: 12px;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 14px;
+    }
+    
+    .quote-form textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    
+    .quote-form button {
+      width: 100%;
+      padding: 14px;
+      background: #B8860B;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .quote-form button:hover {
+      background: #D4AF37;
+      transform: translateY(-2px);
+    }
+    
+    /* Selected Services Display */
+    .selected-services {
+      background: rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 15px;
+      margin-top: 20px;
+    }
+    
+    .selected-services h5 {
+      margin-bottom: 10px;
+      font-size: 0.85rem;
+      color: #D4AF37;
+    }
+    
+    .selected-services-list {
+      font-size: 12px;
+      color: rgba(255,255,255,0.8);
+      max-height: 120px;
+      overflow-y: auto;
+    }
+    
+    /* Back Button */
+    .back-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding: 10px 20px;
+      background: #0a0a0a;
+      color: white;
+      text-decoration: none;
+      border-radius: 30px;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+    
+    .back-button:hover {
+      background: #B8860B;
+      transform: translateX(-5px);
+    }
+    
+    /* Footer */
+    .footer {
+      background: #0a0a0a;
+      color: rgba(255,255,255,0.7);
+      text-align: center;
+      padding: 30px;
+      margin-top: 40px;
+      font-size: 14px;
+    }
+    
+    /* WhatsApp Float */
+    .whatsapp-float {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #25D366;
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      box-shadow: 0 4px 15px rgba(37,211,102,0.3);
+      transition: transform 0.3s;
+      z-index: 100;
+    }
+    
+    .whatsapp-float:hover {
+      transform: scale(1.1);
+    }
+    
+    .whatsapp-float i {
+      font-size: 28px;
+      color: white;
+    }
+    
+    /* Mobile Responsive */
+    @media (max-width: 992px) {
+      .calculator-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .summary-panel {
+        position: static;
+      }
+      
+      .service-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .container {
+        padding: 20px 16px;
+      }
+      
+      .services-panel,
+      .summary-panel {
+        padding: 20px;
+      }
+      
+      .header h1 {
+        font-size: 1.8rem;
+      }
+    }
+    
+    /* Scrollbar */
+    .selected-services-list::-webkit-scrollbar {
+      width: 4px;
+    }
+    
+    .selected-services-list::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.1);
+    }
+    
+    .selected-services-list::-webkit-scrollbar-thumb {
+      background: #B8860B;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="container" style="padding: 0 24px;">
+      <a href="index.html" class="back-button">
+        <i class="fas fa-arrow-left"></i> Back to Home
+      </a>
+      <h1>MG Cleaning <span>Price Calculator</span></h1>
+      <p>Select the services you need and get an instant rough estimate</p>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="calculator-grid">
+      
+      <!-- LEFT PANEL - Service Selection -->
+      <div class="services-panel">
+        <h3><i class="fas fa-clipboard-list"></i> Select Your Services</h3>
+        
+        <!-- Room Cleaning -->
+        <div class="service-category">
+          <h4><i class="fas fa-door-open"></i> Room Cleaning</h4>
+          <div class="service-grid">
+            <label class="service-label"><input type="checkbox" class="service-item" data-price="250"><span>Standard Room</span><span class="price">R250-350</span></label>
+            <label class="service-label"><input type="checkbox" class="service-item" data-price="400"><span>Deep Clean Room</span><span class="price">R250-600</span></label>
+            <label class="service-label"><input type="checkbox" class="service-item" data-price="300"><span>Bathroom Cleaning</span><span class="price">R200-450</span></label>
+            <label class="service-label"><input type="checkbox" class="service-item" data-price="700"><span>Kitchen Deep Clean</span><span class="price">R350-1,200</span></label>
+            <label class="service-label"><input type="checkbox" class="service-item" data-price="400"><span>Lounge/Dining</span><span class="price">R250-600</span></label>
+          </div>
+        </div>
+        
+        <!-- Furniture & Upholstery -->
+        <div class="service-category">
+          <h4><i class="fas fa-couch"></i> Furniture & Upholstery</h4>
+          <div class="service-grid">
+            <label class="service-label"><input type="checkbox" class="service-item" data-price="60"><span>Dining Chair</span><span class="price">R40-80 each</span></label>
+            <label class="service-label"><input type="checkbox" class="service-item" data-price="120"><span>Office Chair</span><span class="price">R80-150 each</span></label>
+            <label class="service-label"><input type="checkbox" class="service-item" data-price="250"><span>Armchair</span><span class="price">R150-350 each</span></label>
+            <label class="service-label"><input type="checkbox" class="service-item" data-price="650"><span>2-Seater Couch</span><span class="price">R450-900</span></label>
+            <label class="service-label"><input type="checkbox" class="service-item" data-price="1800"><span>L-Shape Couch</span><span class="price">R1,200-2,500</span></label>
+            <label class="service-label"><input type="checkbox" class="service-item" data-price="350"><span>Recliner</span><span class="price">R250-500 each</span></label>
+          </div>
+        </div>
+        
+        <!-- Mattress Cleaning -->
+        <div class="service-category">
+          <h4><i class="fas fa-bed"></i> Mattress Cleaning</h4>
+          <div class="flex-row">
+            <label><input type="radio" name="mattress" class="mattress-item" data-price="350"><span>Single (R250-450)</span></label>
+            <label><input type="radio" name="mattress" class="mattress-item" data-price="400"><span>3/4 (R300-500)</span></label>
+            <label><input type="radio" name="mattress" class="mattress-item" data-price="500"><span>Double (R350-650)</span></label>
+            <label><input type="radio" name="mattress" class="mattress-item" data-price="550"><span>Queen (R450-800)</span></label>
+            <label><input type="radio" name="mattress" class="mattress-item" data-price="750"><span>King (R550-1,000)</span></label>
+          </div>
+        </div>
+        
+        <!-- Window & Glass -->
+        <div class="service-category">
+          <h4><i class="fas fa-window-maximize"></i> Window & Glass</h4>
+          <div class="flex-row">
+            <label><input type="checkbox" class="service-item" data-price="40"><span>Standard Window (R20-60)</span></label>
+            <label><input type="checkbox" class="service-item" data-price="80"><span>Large Window (R50-120)</span></label>
+            <label><input type="checkbox" class="service-item" data-price="35"><span>Shopfront Window (R20-50/m²)</span></label>
+          </div>
+        </div>
+        
+        <!-- Pressure Washing -->
+        <div class="service-category">
+          <h4><i class="fas fa-water"></i> Pressure Washing</h4>
+          <div class="flex-row">
+            <label><input type="checkbox" class="service-item" data-price="300"><span>Pavement Cleaning (R10-25/m²)</span></label>
+            <label><input type="checkbox" class="service-item" data-price="400"><span>Driveway Cleaning (R15-35/m²)</span></label>
+            <label><input type="checkbox" class="service-item" data-price="300"><span>Parking Area (R10-30/m²)</span></label>
+          </div>
+        </div>
+        
+        <!-- House Packages -->
+        <div class="service-category">
+          <h4><i class="fas fa-home"></i> House Packages</h4>
+          <div class="flex-row">
+            <label><input type="radio" name="house-package" class="package-item" data-price="1800"><span>1 Bedroom (R1,200-2,500)</span></label>
+            <label><input type="radio" name="house-package" class="package-item" data-price="2500"><span>2 Bedroom (R1,800-3,500)</span></label>
+            <label><input type="radio" name="house-package" class="package-item" data-price="4000"><span>3 Bedroom (R2,500-5,500)</span></label>
+            <label><input type="radio" name="house-package" class="package-item" data-price="6000"><span>4 Bedroom (R4,000-8,000)</span></label>
+            <label><input type="radio" name="house-package" class="package-item" data-price="10000"><span>5+ Bedroom (From R6,000)</span></label>
+          </div>
+        </div>
+        
+        <!-- Value Packages -->
+        <div class="service-category">
+          <h4><i class="fas fa-gem"></i> Value Packages</h4>
+          <div class="flex-row">
+            <label><input type="radio" name="value-package" class="value-package-item" data-price="1299"><span>🥉 Bronze Refresh - R1,299</span></label>
+            <label><input type="radio" name="value-package" class="value-package-item" data-price="2499"><span>🥈 Silver Deep Clean - R2,499</span></label>
+            <label><input type="radio" name="value-package" class="value-package-item" data-price="4999"><span>🥇 Gold Executive - R4,999</span></label>
+            <label><input type="radio" name="value-package" class="value-package-item" data-price="7999"><span>💎 Platinum Property - From R7,999</span></label>
+          </div>
+        </div>
+        
+        <!-- Monthly Contracts -->
+        <div class="service-category">
+          <h4><i class="fas fa-calendar-alt"></i> Monthly Contracts</h4>
+          <div class="flex-row">
+            <label><input type="checkbox" class="service-item" data-price="2500"><span>Monthly Cleaning Contract (From R2,500/m)</span></label>
+            <label><input type="checkbox" class="service-item" data-price="350"><span>Daily Cleaner (R250-500/day)</span></label>
+          </div>
+        </div>
+        
+        <p style="font-size: 12px; color: #999; margin-top: 20px; text-align: center;">
+          <i class="fas fa-info-circle"></i> Prices shown are estimates. Final quote confirmed after site inspection.
+        </p>
+      </div>
+      
+      <!-- RIGHT PANEL - Price Summary & Quote -->
+      <div class="summary-panel">
+        <h3><i class="fas fa-calculator"></i> Your Estimate</h3>
+        
+        <div class="price-breakdown">
+          <div class="price-row">
+            <span>Subtotal:</span>
+            <span id="subtotal" style="font-weight: 700;">R0</span>
+          </div>
+          <div class="price-row">
+            <span>VAT (15%):</span>
+            <span id="vat">R0</span>
+          </div>
+          <div class="price-row total">
+            <span>Total Estimate:</span>
+            <span id="total" style="font-size: 1.5rem; color: #D4AF37;">R0</span>
+          </div>
+        </div>
+        
+        <div class="selected-services">
+          <h5><i class="fas fa-list"></i> Selected Services</h5>
+          <div class="selected-services-list" id="selectedServicesList">No services selected yet</div>
+        </div>
+        
+        <div class="quote-form">
+          <h4><i class="fas fa-paper-plane"></i> Request Final Quote</h4>
+          <form id="quoteForm">
+            <input type="hidden" name="estimate_total" id="estimateTotal">
+            <input type="text" name="name" placeholder="Your Full Name" required>
+            <input type="tel" name="phone" placeholder="Phone Number" required>
+            <input type="email" name="email" placeholder="Email Address">
+            <input type="text" name="address" placeholder="Property Address">
+            <textarea name="notes" placeholder="Additional notes or preferred date"></textarea>
+            <button type="submit"><i class="fas fa-check-circle"></i> Request Quote</button>
+          </form>
+          <p style="font-size: 11px; text-align: center; margin-top: 15px; color: rgba(255,255,255,0.5);">
+            <i class="fas fa-lock"></i> Your information is secure. We'll respond within 24 hours.
+          </p>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+  <!-- Footer -->
+  <div class="footer">
+    <p>MG Cleaning - A Division of Mbulaheni Group | Professional Cleaning Services</p>
+    <p style="margin-top: 10px;">Call us: <a href="tel:0870931138" style="color: #B8860B;">087 093 1138</a> | WhatsApp: <a href="https://wa.me/27726650565" style="color: #B8860B;">072 665 0565</a></p>
+  </div>
+  
+  <!-- WhatsApp Float -->
+  <a href="https://wa.me/27726650565" target="_blank" class="whatsapp-float" aria-label="Chat on WhatsApp">
+    <i class="fab fa-whatsapp"></i>
+  </a>
+  
+  <script>
+    // Dynamic Price Calculator
+    let currentTotal = 0;
+    
+    function updatePrice() {
+      let total = 0;
+      const selectedItems = [];
+      
+      // Service items (checkboxes)
+      document.querySelectorAll('.service-item:checked').forEach(item => {
+        total += parseInt(item.dataset.price);
+        const label = item.closest('label');
+        if (label) selectedItems.push(label.innerText.trim());
+      });
+      
+      // Mattress selection (radio)
+      const mattress = document.querySelector('.mattress-item:checked');
+      if (mattress) {
+        total += parseInt(mattress.dataset.price);
+        const label = mattress.closest('label');
+        if (label) selectedItems.push('Mattress: ' + label.innerText.trim());
+      }
+      
+      // House package (radio)
+      const packageItem = document.querySelector('.package-item:checked');
+      if (packageItem) {
+        total += parseInt(packageItem.dataset.price);
+        const label = packageItem.closest('label');
+        if (label) selectedItems.push('House Package: ' + label.innerText.trim());
+      }
+      
+      // Value package (radio)
+      const valuePackage = document.querySelector('.value-package-item:checked');
+      if (valuePackage) {
+        total += parseInt(valuePackage.dataset.price);
+        const label = valuePackage.closest('label');
+        if (label) selectedItems.push('Package: ' + label.innerText.trim());
+      }
+      
+      currentTotal = total;
+      
+      // Update display
+      const subtotalElem = document.getElementById('subtotal');
+      const vatElem = document.getElementById('vat');
+      const totalElem = document.getElementById('total');
+      const estimateTotal = document.getElementById('estimateTotal');
+      
+      subtotalElem.textContent = 'R' + total.toLocaleString();
+      const vat = Math.round(total * 0.15);
+      vatElem.textContent = 'R' + vat.toLocaleString();
+      const grandTotal = total + vat;
+      totalElem.textContent = 'R' + grandTotal.toLocaleString();
+      estimateTotal.value = grandTotal;
+      
+      // Update selected services list
+      const selectedListElem = document.getElementById('selectedServicesList');
+      if (selectedItems.length === 0) {
+        selectedListElem.innerHTML = 'No services selected yet';
+      } else {
+        selectedListElem.innerHTML = selectedItems.map(item => '• ' + item).join('<br>');
+      }
+    }
+    
+    // Add event listeners to all inputs
+    document.querySelectorAll('.service-item, .mattress-item, .package-item, .value-package-item').forEach(el => {
+      el.addEventListener('change', updatePrice);
+    });
+    
+    // Clear radio groups when selecting another group type
+    document.querySelectorAll('.package-item').forEach(el => {
+      el.addEventListener('change', () => {
+        // Clear value packages when house package selected
+        document.querySelectorAll('.value-package-item').forEach(radio => radio.checked = false);
+        updatePrice();
+      });
+    });
+    
+    document.querySelectorAll('.value-package-item').forEach(el => {
+      el.addEventListener('change', () => {
+        // Clear house packages when value package selected
+        document.querySelectorAll('.package-item').forEach(radio => radio.checked = false);
+        updatePrice();
+      });
+    });
+    
+    // Form submission
+    const quoteForm = document.getElementById('quoteForm');
+    quoteForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      if (currentTotal === 0) {
+        alert('Please select at least one service before requesting a quote.');
+        return;
+      }
+      
+      // Get selected services text
+      const selectedServices = document.getElementById('selectedServicesList').innerHTML.replace(/<br>/g, '\n').replace(/• /g, '');
+      
+      const formData = new FormData(quoteForm);
+      formData.append('_subject', '🧹 New Quote Request from MG Cleaning Calculator');
+      formData.append('service_selection', selectedServices);
+      formData.append('message', `Estimate Total: R${document.getElementById('estimateTotal').value}\n\nSelected Services:\n${selectedServices}\n\nAdditional Notes: ${document.querySelector('textarea[name="notes"]').value || 'None'}`);
+      
+      try {
+        const response = await fetch('https://formspree.io/f/mykvqdoj', {
+          method: 'POST',
+          body: formData,
+          headers: { 'Accept': 'application/json' }
+        });
+        
+        if (response.ok) {
+          alert('✓ Thank you! We will contact you within 24 hours with your final quote.\n\nYou can also call us directly at 087 093 1138 for immediate assistance.');
+          quoteForm.reset();
+          document.querySelectorAll('.service-item, .mattress-item, .package-item, .value-package-item').forEach(el => {
+            if (el.type === 'checkbox') el.checked = false;
+            if (el.type === 'radio') el.checked = false;
+          });
+          updatePrice();
+        } else {
+          alert('⚠️ Form submission failed. Please call us directly at 087 093 1138 for a quote.');
+        }
+      } catch (error) {
+        alert('⚠️ Connection error. Please call us directly at 087 093 1138 for a quote.');
+      }
+    });
+    
+    // Initial update
+    updatePrice();
+  </script>
+</body>
+</html>
