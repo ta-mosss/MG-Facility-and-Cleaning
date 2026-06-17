@@ -201,6 +201,10 @@ body.light .theme-toggle::after{left:19px;}
 <div id="root"></div>
 
 <script>
+  // Enable offline persistence
+db.enablePersistence({ synchronizeTabs: true })
+  .then(() => console.log('🔥 Offline persistence enabled'))
+  .catch((err) => console.warn('Persistence error:', err));
 const firebaseConfig={
   apiKey:"AIzaSyBpoDnbWKvWQdvcZnhUZwFr24iox2fWJto",
   authDomain:"test-bot-49f99.firebaseapp.com",
