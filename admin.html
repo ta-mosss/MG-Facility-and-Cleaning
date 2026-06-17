@@ -201,10 +201,6 @@ body.light .theme-toggle::after{left:19px;}
 <div id="root"></div>
 
 <script>
-  // Enable offline persistence
-db.enablePersistence({ synchronizeTabs: true })
-  .then(() => console.log('🔥 Offline persistence enabled'))
-  .catch((err) => console.warn('Persistence error:', err));
 const firebaseConfig={
   apiKey:"AIzaSyBpoDnbWKvWQdvcZnhUZwFr24iox2fWJto",
   authDomain:"test-bot-49f99.firebaseapp.com",
@@ -816,28 +812,14 @@ function Sidebar({page,setPage,cfg,counts,theme,toggleTheme}){
   );
 }
 
-function TopBar({title,sub,right, userId}){
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  useEffect(() => {
-    const online = () => setIsOnline(true);
-    const offline = () => setIsOnline(false);
-    window.addEventListener('online', online);
-    window.addEventListener('offline', offline);
-    return () => { window.removeEventListener('online', online); window.removeEventListener('offline', offline); };
-  }, []);
+function TopBar({title,sub,right}){
   return(
     <div className="topbar">
       <div className="topbar-left">
         <div className="topbar-title">{title}</div>
         <div className="topbar-sub">{sub}</div>
       </div>
-      <div className="topbar-right">
-        <NotificationBell userId={userId} />
-        <div className={`sync-status ${isOnline ? 'online' : 'offline'}`}>
-          <span className="dot"></span> {isOnline ? 'Online' : 'Offline'}
-        </div>
-        {right}
-      </div>
+      <div className="topbar-right">{right}</div>
     </div>
   );
 }
@@ -2959,9 +2941,4 @@ function App(){
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
-  <script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js');
-}
-</script>
 </html>
