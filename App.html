@@ -16,8 +16,8 @@ const connectionState = firebase.firestore().client.connectionState;
   <meta name="theme-color" content="#FFFFFF" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>Smart Inspection · MG Field</title>
-  <link rel="manifest" href="data:application/json,{"name":"Smart Inspection","short_name":"SmartInsp","start_url":"/","display":"standalone","background_color":"#FFFFFF","theme_color":"#FFFFFF","icons":[{"src":"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%2300C896'/%3E%3Cpath d='M30 50l14 14 26-26' stroke='%23fff' stroke-width='8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E","sizes":"192x192","type":"image/svg+xml"}]}" />
+  <title>Cleaning Managment App · MG Field</title>
+  <link rel="manifest" href="data:application/json,{"name":"Cleaning Management App","short_name":"SmartInsp","start_url":"/","display":"standalone","background_color":"#FFFFFF","theme_color":"#FFFFFF","icons":[{"src":"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%2300C896'/%3E%3Cpath d='M30 50l14 14 26-26' stroke='%23fff' stroke-width='8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E","sizes":"192x192","type":"image/svg+xml"}]}" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
@@ -258,7 +258,7 @@ function Login({ onLogin }){
             <img src="logo.png" alt="MG Cleaning Logo" style={{ maxWidth: 100, height: "auto" }} onError={(e) => { e.target.style.display = "none"; }} />
           </div>
           <div style={{ fontSize: 40, marginBottom: 8 }}>🔍</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: "#0A1A2F" }}>Smart Inspection</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: "#0A1A2F" }}>Cleaning Management App</div>
           <div style={{ fontSize: 13, color: "#7A8DA0" }}>MG Facility & Cleaning · Field Ops</div>
         </div>
         <div className="input-group">
@@ -653,7 +653,7 @@ function SmartInspectionApp(){
     <div className="app" style={{ background: "#FFFFFF" }}>
       <div className="header">
         <div className="brand">
-          🔍 Smart Inspection
+          🔍 Cleaning Management App
           <small>· {team}</small>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
