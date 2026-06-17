@@ -102,6 +102,8 @@
     .detail-item .label{color:#7A8DA0;font-weight:500;margin-right:4px;}
     .detail-item .value{color:#1A2332;font-weight:500;}
     .service-tag{display:inline-block;background:#E8ECF2;padding:2px 10px;border-radius:12px;font-size:11px;color:#4A5A6E;margin-top:4px;}
+    .logo-container{display:flex;justify-content:center;margin-bottom:12px;}
+    .logo-container img{max-width:100px;max-height:100px;object-fit:contain;border-radius:12px;}
     @media (max-width:400px){.stat-grid{grid-template-columns:1fr 1fr;}}
   </style>
 </head>
@@ -147,6 +149,81 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 function Toast({ msg, type }){ if(!msg) return null; return <div className={`toast ${type}`}>{msg}</div>; }
 
+// ─── SIGNATURE PAD COMPONENT (re-initializes on mount) ───
+function SignaturePad({ onReady }) {
+  const canvasRef = useRef(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    // Set canvas size to match CSS
+    canvas.width = canvas.offsetWidth || 400;
+    canvas.height = 120;
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#00C896";
+
+    let drawing = false;
+    const getXY = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const src = e.touches ? e.touches[0] : e;
+      return [src.clientX - rect.left, src.clientY - rect.top];
+    };
+    const start = (e) => {
+      e.preventDefault();
+      drawing = true;
+      const [x, y] = getXY(e);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    };
+    const move = (e) => {
+      e.preventDefault();
+      if (!drawing) return;
+      const [x, y] = getXY(e);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    };
+    const stop = () => {
+      drawing = false;
+    };
+
+    canvas.addEventListener("mousedown", start);
+    canvas.addEventListener("mousemove", move);
+    canvas.addEventListener("mouseup", stop);
+    canvas.addEventListener("touchstart", start, { passive: false });
+    canvas.addEventListener("touchmove", move, { passive: false });
+    canvas.addEventListener("touchend", stop);
+
+    // Clear function exposed via ref
+    if (onReady) onReady(canvas);
+
+    return () => {
+      canvas.removeEventListener("mousedown", start);
+      canvas.removeEventListener("mousemove", move);
+      canvas.removeEventListener("mouseup", stop);
+      canvas.removeEventListener("touchstart", start);
+      canvas.removeEventListener("touchmove", move);
+      canvas.removeEventListener("touchend", stop);
+    };
+  }, []);
+
+  const clearSignature = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  return (
+    <div style={{ background: "#F8FAFC", borderRadius: 10, border: "1px solid #E8ECF2", padding: 4 }}>
+      <canvas ref={canvasRef} width="400" height="120" style={{ width: "100%", touchAction: "none", borderRadius: 8 }} />
+      <button className="btn btn-sm btn-outline" style={{ marginTop: 4 }} onClick={clearSignature}>🗑 Clear</button>
+    </div>
+  );
+}
+
 function Login({ onLogin }){
   const [team, setTeam] = useState("");
   const [password, setPassword] = useState("");
@@ -163,7 +240,10 @@ function Login({ onLogin }){
   return (
     <div className="app" style={{ paddingTop: 40, background: "#FFFFFF", minHeight: "100vh" }}>
       <div className="card" style={{ padding: 24, border: "1px solid #E8ECF2" }}>
-        <div style={{ textAlign: "center", marginBottom: 24 }}>
+        <div style={{ textAlign: "center", marginBottom: 16 }}>
+          <div className="logo-container">
+            <img src="logo.png" alt="MG Cleaning Logo" style={{ maxWidth: 100, height: "auto" }} onError={(e) => { e.target.style.display = "none"; }} />
+          </div>
           <div style={{ fontSize: 40, marginBottom: 8 }}>🔍</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: "#0A1A2F" }}>Smart Inspection</div>
           <div style={{ fontSize: 13, color: "#7A8DA0" }}>MG Facility & Cleaning · Field Ops</div>
@@ -216,6 +296,7 @@ function SmartInspectionApp(){
   const [watchId, setWatchId] = useState(null);
   const [ticketsMap, setTicketsMap] = useState({});
   const [lastRefresh, setLastRefresh] = useState(Date.now());
+  const [signatureCanvas, setSignatureCanvas] = useState(null);
 
   const [slamItems, setSlamItems] = useState({
     "Floors": false, "Walls": false, "Windows": false, "Doors": false,
@@ -398,7 +479,7 @@ function SmartInspectionApp(){
     setSlamPhotos([]);
   };
 
-  // Signoff
+  // Signoff - using signatureCanvas ref
   const handleSignoffSubmit = async () => {
     if(!selectedJobForSignoff){ showToast("No job selected", "error"); return; }
     const done = Object.values(signoffItems).filter(Boolean).length;
@@ -408,7 +489,11 @@ function SmartInspectionApp(){
     if(csat === 0){ showToast("Please provide CSAT rating", "error"); return; }
     if(ces === 0){ showToast("Please provide CES rating", "error"); return; }
     const loc = await getLocation();
-    const signatureData = await captureSignature();
+    // Capture signature from the canvas
+    let signatureData = null;
+    if (signatureCanvas) {
+      signatureData = signatureCanvas.toDataURL("image/png");
+    }
     const data = {
       jobId: selectedJobForSignoff.id,
       ticketRef: selectedJobForSignoff.ticketRef || "N/A",
@@ -441,12 +526,7 @@ function SmartInspectionApp(){
     setSignoffItems(Object.keys(signoffItems).reduce((acc,k) => ({...acc, [k]: false}), {}));
     setNps(0); setCsat(0); setCes(0);
     setSignoffFeedback("");
-  };
-
-  const captureSignature = () => {
-    const canvas = document.getElementById("signature-pad");
-    if(canvas) return canvas.toDataURL("image/png");
-    return null;
+    setSignatureCanvas(null);
   };
 
   const handlePhotoUpload = (e) => {
@@ -506,7 +586,6 @@ function SmartInspectionApp(){
   const inProgressCount = allJobs.filter(j => j.status === "in-progress").length;
   const scheduledCount = allJobs.filter(j => j.status === "scheduled").length;
 
-  // Get ticket for active job
   const activeTicket = activeJob ? ticketsMap[activeJob.ticketRef] : null;
 
   return (
@@ -547,7 +626,6 @@ function SmartInspectionApp(){
           <div className="card-title">🟢 Current Job</div>
           <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>{activeJob.ticketRef || "No Ref"}</div>
           
-          {/* Ticket Details */}
           {activeTicket ? (
             <div style={{ marginBottom: 8 }}>
               {renderTicketDetails(activeTicket)}
@@ -558,7 +636,6 @@ function SmartInspectionApp(){
             </div>
           )}
 
-          {/* Check-in/out times */}
           {activeJob.status === "in-progress" && activeJob.startedAt && (
             <div style={{ fontSize: 12, color: "#10B981", margin: "4px 0" }}>
               📥 Checked in: {new Date(activeJob.startedAt).toLocaleTimeString()}
@@ -758,10 +835,7 @@ function SmartInspectionApp(){
 
           <div className="input-group">
             <label>Client Signature</label>
-            <div style={{ background: "#F8FAFC", borderRadius: 10, border: "1px solid #E8ECF2", padding: 4 }}>
-              <canvas id="signature-pad" width="400" height="120" style={{ width: "100%", touchAction: "none", borderRadius: 8 }} />
-              <button className="btn btn-sm btn-outline" style={{ marginTop: 4 }} onClick={() => { const c = document.getElementById("signature-pad"); const ctx = c.getContext("2d"); ctx.clearRect(0,0,c.width,c.height); }}>Clear</button>
-            </div>
+            <SignaturePad onReady={(canvas) => setSignatureCanvas(canvas)} />
           </div>
 
           <button className="btn btn-primary" onClick={handleSignoffSubmit}>✅ Complete Sign-Off</button>
@@ -795,7 +869,6 @@ function JobDetailView({ job, onBack, team, ticketsMap, showToast, renderTicketD
         <span className="badge">{job.status}</span>
       </div>
 
-      {/* Job Summary Card */}
       <div className="card">
         <div className="card-title">📍 Job Details</div>
         {ticket ? (
@@ -898,47 +971,9 @@ function Modal({ title, onClose, wide, children }){
   );
 }
 
-// ─── SIGNATURE PAD SETUP ───
-function SignatureSetup(){
-  useEffect(() => {
-    const canvas = document.getElementById("signature-pad");
-    if(!canvas) return;
-    const ctx = canvas.getContext("2d");
-    let drawing = false;
-    const getXY = (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const src = e.touches ? e.touches[0] : e;
-      return [src.clientX - rect.left, src.clientY - rect.top];
-    };
-    const start = (e) => { e.preventDefault(); drawing = true; const [x,y] = getXY(e); ctx.beginPath(); ctx.moveTo(x,y); };
-    const move = (e) => { e.preventDefault(); if(!drawing) return; const [x,y] = getXY(e); ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.strokeStyle = "#00C896"; ctx.lineTo(x,y); ctx.stroke(); };
-    const stop = () => { drawing = false; };
-    canvas.addEventListener("mousedown", start);
-    canvas.addEventListener("mousemove", move);
-    canvas.addEventListener("mouseup", stop);
-    canvas.addEventListener("touchstart", start, { passive: false });
-    canvas.addEventListener("touchmove", move, { passive: false });
-    canvas.addEventListener("touchend", stop);
-    return () => {
-      canvas.removeEventListener("mousedown", start);
-      canvas.removeEventListener("mousemove", move);
-      canvas.removeEventListener("mouseup", stop);
-      canvas.removeEventListener("touchstart", start);
-      canvas.removeEventListener("touchmove", move);
-      canvas.removeEventListener("touchend", stop);
-    };
-  }, []);
-  return null;
-}
-
 // ─── ROOT ───
 function Root(){
-  return (
-    <>
-      <SignatureSetup />
-      <SmartInspectionApp />
-    </>
-  );
+  return <SmartInspectionApp />;
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<Root />);
