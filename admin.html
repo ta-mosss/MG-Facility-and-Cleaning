@@ -187,6 +187,11 @@ body.light .theme-toggle::after{left:19px;}
 .totals-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:var(--text2);}
 .totals-row.grand{border-top:1px solid var(--border);margin-top:4px;padding-top:10px;font-size:16px;font-weight:800;color:var(--text);}
 .job-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--card);}
+.field-data-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600;}
+.field-data-badge.gps{background:rgba(16,185,129,0.15);color:#10B981;}
+.field-data-badge.slam{background:rgba(245,158,11,0.15);color:#F59E0B;}
+.field-data-badge.signoff{background:rgba(139,92,246,0.15);color:#8B5CF6;}
+.field-data-badge.checkin{background:rgba(59,130,246,0.15);color:#3B82F6;}
 @media print{body *{visibility:hidden;}#print-area,#print-area *{visibility:visible;}#print-area{position:fixed;left:0;top:0;width:100%;background:#fff;color:#000;padding:20px;}}
 @media(max-width:900px){.sidebar{display:none;}.stats-row{grid-template-columns:repeat(3,1fr);}.week-grid{grid-template-columns:1fr;}.month-grid{grid-template-columns:repeat(7,minmax(34px,1fr));}}
 @media(max-width:600px){.form-grid,.form-grid.cols3,.form-grid.cols4{grid-template-columns:1fr;}.stats-row{grid-template-columns:repeat(2,1fr);}}
@@ -534,8 +539,45 @@ function buildInvoicePdfHtml(invoice,cfg){
   return pdfShell(cfg,invoice.id,"INVOICE",body);
 }
 
-function buildTicketPdfHtml(ticket, cfg){
-  const notes = (ticket.notes||[]).map(n => `<div style="padding:4px 0;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="font-weight:600;">${n.type||"note"}</span> ${n.txt} <span style="color:#999;font-size:10px;">${n.at?new Date(n.at).toLocaleString("en-ZA"):""}</span></div>`).join("");
+function buildTicketPdfHtml(ticket, cfg, assessments, signoffs, checkins){
+  const slamItems = assessments.length > 0 ? assessments[0] : null;
+  const signoff = signoffs.length > 0 ? signoffs[0] : null;
+  
+  let slamHtml = "No SLAM assessment recorded";
+  if(slamItems){
+    const items = Object.entries(slamItems.items||{}).filter(([k,v])=>v===false).map(([k])=>`⚠️ ${k}`).join(", ");
+    slamHtml = `
+      <div style="margin:4px 0;"><strong>Damaged/Missing:</strong> ${items || "None reported"}</div>
+      <div style="margin:4px 0;"><strong>Notes:</strong> ${slamItems.notes || "—"}</div>
+      ${slamItems.photos && slamItems.photos.length > 0 ? `<div><strong>Photos:</strong> ${slamItems.photos.length} uploaded</div>` : ""}
+    `;
+  }
+  
+  let signoffHtml = "No sign-off recorded";
+  if(signoff){
+    const items = Object.entries(signoff.checklist||{}).filter(([k,v])=>v===true).map(([k])=>`✅ ${k}`).join(", ");
+    signoffHtml = `
+      <div style="margin:4px 0;"><strong>Checklist:</strong> ${items || "—"}</div>
+      <div style="margin:4px 0;"><strong>NPS:</strong> ${signoff.nps}/10 ⭐</div>
+      <div style="margin:4px 0;"><strong>CSAT:</strong> ${"★".repeat(signoff.csat||0)}${"☆".repeat(5-(signoff.csat||0))}</div>
+      <div style="margin:4px 0;"><strong>CES:</strong> ${"★".repeat(signoff.ces||0)}${"☆".repeat(5-(signoff.ces||0))}</div>
+      <div style="margin:4px 0;"><strong>Feedback:</strong> ${signoff.feedback || "—"}</div>
+      ${signoff.signature ? '<div><strong>✓ Signed</strong></div>' : ''}
+    `;
+  }
+  
+  let checkinHtml = "No check-ins recorded";
+  if(checkins && checkins.length > 0){
+    checkinHtml = checkins.map(c => `
+      <div style="margin:4px 0;">
+        ${c.type === "checkin" ? "📥 Check In" : "📤 Check Out"} 
+        ${c.timestamp ? new Date(c.timestamp).toLocaleString() : ""}
+        ${c.verified ? "✅ GPS Verified" : ""}
+        ${c.location ? `📍 ${c.location.lat?.toFixed(5)}, ${c.location.lng?.toFixed(5)}` : ""}
+      </div>
+    `).join("");
+  }
+
   const body=`
 <h2>Ticket Details</h2>
 <div class="grid">
@@ -543,26 +585,30 @@ function buildTicketPdfHtml(ticket, cfg){
   <div class="row"><div class="key">Status</div><div class="val">${ST[ticket.status]?.l||ticket.status}</div></div>
   <div class="row"><div class="key">Client</div><div class="val">${ticket.clientName||"—"}</div></div>
   <div class="row"><div class="key">Phone</div><div class="val">${ticket.phone||"—"}</div></div>
-  <div class="row"><div class="key">Email</div><div class="val">${ticket.email||"—"}</div></div>
   <div class="row"><div class="key">Address</div><div class="val">${ticket.address||"—"}</div></div>
   <div class="row"><div class="key">Service</div><div class="val">${SERVICES.find(s=>s.id===ticket.serviceType)?.label||ticket.serviceType||"—"}</div></div>
-  <div class="row"><div class="key">Priority</div><div class="val">${ticket.priority||"Normal"}</div></div>
-  <div class="row"><div class="key">Created</div><div class="val">${ticket.createdAt?new Date(ticket.createdAt).toLocaleString("en-ZA"):"—"}</div></div>
+  <div class="row"><div class="key">Team</div><div class="val">${ticket.assignedTeam || "—"}</div></div>
+</div>
+<h2>📍 Check-In / Out Timeline</h2>
+<div style="border:1px solid #ddd;border-radius:6px;padding:8px;margin-bottom:10px;">
+${checkinHtml}
+</div>
+<h2>📋 SLAM Assessment (Pre-Cleaning)</h2>
+<div style="border:1px solid #ddd;border-radius:6px;padding:8px;margin-bottom:10px;">
+${slamHtml}
+</div>
+<h2>✅ Client Sign-Off</h2>
+<div style="border:1px solid #ddd;border-radius:6px;padding:8px;margin-bottom:10px;">
+${signoffHtml}
 </div>
 <h2>Timeline & Notes</h2>
 <div style="max-height:300px;overflow-y:auto;border:1px solid #ddd;border-radius:6px;padding:8px;">
-${notes||"<div style='color:#999;text-align:center;padding:16px;'>No notes</div>"}
-</div>
-<h2>Checklist & Sign-off</h2>
-<div class="grid">
-  <div class="row"><div class="val">Checklist: ${ticket.checklistItems ? Object.values(ticket.checklistItems).filter(Boolean).length : 0} / ${CLEANING_CHECKLIST.length} completed</div></div>
-  <div class="row"><div class="val">Client Rating: ${ticket.rating ? "★".repeat(ticket.rating) : "Not rated"}</div></div>
-  <div class="row"><div class="val">Feedback: ${ticket.feedback || "—"}</div></div>
+${(ticket.notes||[]).map(n => `<div style="padding:4px 0;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="font-weight:600;">${n.type||"note"}</span> ${n.txt} <span style="color:#999;font-size:10px;">${n.at?new Date(n.at).toLocaleString("en-ZA"):""}</span></div>`).join("") || "<div style='color:#999;text-align:center;padding:16px;'>No notes</div>"}
 </div>
 <div style="margin-top:12px;padding:8px;border:1px solid #00C896;border-radius:6px;background:#f0faf8;text-align:center;font-weight:600;color:#00C896;">
 ${ticket.status==="closed"||ticket.status==="completed"?"✅ Job Completed & Signed Off":"⏳ Job in Progress"}
 </div>`;
-  return pdfShell(cfg,ticket.ref,"TICKET COMPLETION CERTIFICATE",body);
+  return pdfShell(cfg,ticket.ref,"JOB COMPLETION CERTIFICATE",body);
 }
 
 /* ── UI ATOMS ── */
@@ -1318,7 +1364,7 @@ function ClientSignOffModal({ tickets, onSave, onClose, showToast }){
 }
 
 /* ════════════════════════════════════════════════════
-   MOBILE TEAM PORTAL (UPDATED - Auto-updates ticket status)
+   MOBILE TEAM PORTAL
 ════════════════════════════════════════════════════ */
 function MobileTeamPortal({jobs, tickets, cfg, showToast}){
   const [teamName,setTeamName]=useState("");
@@ -1459,7 +1505,7 @@ function MobileTeamPortal({jobs, tickets, cfg, showToast}){
   );
 }
 
-/* ── TICKET DETAIL ── */
+/* ── TICKET DETAIL (UPDATED WITH FIELD DATA) ── */
 function TicketDetail({ticket, tickets, quotes, jobs, invoices, inspections, signoffs, cfg, onBack, showToast, setPage, setSel, staffList}){
   const [showQuoteBuilder,setShowQuoteBuilder]=useState(false);
   const [showScheduleJob,setShowScheduleJob]=useState(false);
@@ -1473,6 +1519,20 @@ function TicketDetail({ticket, tickets, quotes, jobs, invoices, inspections, sig
   const [refreshKey, setRefreshKey] = useState(0);
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState("");
+  
+  // Field data from Smart Inspection
+  const [assessments, setAssessments] = useState([]);
+  const [fieldSignoffs, setFieldSignoffs] = useState([]);
+  const [checkins, setCheckins] = useState([]);
+
+  // Fetch field data for this ticket
+  useEffect(() => {
+    if(!ticket?.ref) return;
+    const unsub1 = col("assessments").where("ticketRef", "==", ticket.ref).onSnapshot(snap => setAssessments(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const unsub2 = col("signoffs").where("ticketRef", "==", ticket.ref).onSnapshot(snap => setFieldSignoffs(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const unsub3 = col("checkins").where("ticketRef", "==", ticket.ref).orderBy("timestamp", "desc").onSnapshot(snap => setCheckins(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    return () => { unsub1(); unsub2(); unsub3(); };
+  }, [ticket?.ref]);
 
   const ticketQuotes=(quotes||[]).filter(q=>q.ticketRef===localTicket?.ref);
   const ticketJobs=(jobs||[]).filter(j=>j.ticketRef===localTicket?.ref);
@@ -1482,6 +1542,9 @@ function TicketDetail({ticket, tickets, quotes, jobs, invoices, inspections, sig
   const latestQuote=ticketQuotes.length?ticketQuotes.reduce((a,b)=>new Date(a.createdAt)>new Date(b.createdAt)?a:b):null;
   const latestJob=ticketJobs.length?ticketJobs.reduce((a,b)=>new Date(a.createdAt)>new Date(b.createdAt)?a:b):null;
   const latestInvoice=ticketInvoices.length?ticketInvoices.reduce((a,b)=>new Date(a.createdAt)>new Date(b.createdAt)?a:b):null;
+
+  // Check if we have field data
+  const hasFieldData = assessments.length > 0 || fieldSignoffs.length > 0 || checkins.length > 0;
 
   if(!localTicket) return <div className="page-content"><div style={{textAlign:"center",padding:40,color:"var(--text4)"}}>Ticket not found.</div></div>;
 
@@ -1582,6 +1645,62 @@ function TicketDetail({ticket, tickets, quotes, jobs, invoices, inspections, sig
     );
   };
 
+  const renderFieldData = () => {
+    if(!hasFieldData) return <div className="text-muted" style={{padding:"8px 0"}}>No field data collected yet.</div>;
+    
+    let html = [];
+    
+    // Check-ins
+    if(checkins.length > 0){
+      html.push(<div key="checkins" style={{marginBottom:12}}>
+        <div style={{fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:4}}>📍 Check-In / Out</div>
+        {checkins.map(c => (
+          <div key={c.id} style={{display:"flex", justifyContent:"space-between", padding:"4px 0", borderBottom:"1px solid var(--border)", fontSize:12}}>
+            <span>{c.type === "checkin" ? "📥 Check In" : "📤 Check Out"}</span>
+            <span style={{color:"var(--text3)"}}>{c.timestamp ? new Date(c.timestamp).toLocaleString() : ""}</span>
+            {c.verified && <span className="field-data-badge gps">✅ GPS Verified</span>}
+          </div>
+        ))}
+      </div>);
+    }
+    
+    // SLAM
+    if(assessments.length > 0){
+      const slam = assessments[0];
+      const damaged = Object.entries(slam.items||{}).filter(([k,v])=>v===false).map(([k])=>k);
+      html.push(<div key="slam" style={{marginBottom:12}}>
+        <div style={{fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:4}}>📋 SLAM Assessment</div>
+        <div style={{fontSize:12, color:"var(--text2)"}}>
+          {damaged.length > 0 ? (
+            <span style={{color:"#EF4444"}}>⚠️ Damaged/Missing: {damaged.join(", ")}</span>
+          ) : <span className="text-green">✅ All items in good condition</span>}
+        </div>
+        {slam.notes && <div style={{fontSize:12, color:"var(--text3)"}}>📝 {slam.notes}</div>}
+        {slam.photos && slam.photos.length > 0 && <div style={{fontSize:11, color:"var(--text3)"}}>📷 {slam.photos.length} photos uploaded</div>}
+      </div>);
+    }
+    
+    // Sign-off
+    if(fieldSignoffs.length > 0){
+      const sf = fieldSignoffs[0];
+      html.push(<div key="signoff" style={{marginBottom:12}}>
+        <div style={{fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:4}}>✅ Client Sign-Off</div>
+        <div style={{display:"flex", gap:12, flexWrap:"wrap", fontSize:12}}>
+          <span>NPS: <strong>{sf.nps}/10</strong></span>
+          <span>CSAT: <strong>{'★'.repeat(sf.csat||0)}{'☆'.repeat(5-(sf.csat||0))}</strong></span>
+          <span>CES: <strong>{'★'.repeat(sf.ces||0)}{'☆'.repeat(5-(sf.ces||0))}</strong></span>
+        </div>
+        {sf.feedback && <div style={{fontSize:12, color:"var(--text3)"}}>💬 {sf.feedback}</div>}
+        {sf.signature && <div style={{fontSize:11, color:"var(--text3)"}}>✍️ Signed</div>}
+        <div style={{fontSize:11, color:"var(--text3)"}}>
+          Checklist: {Object.entries(sf.checklist||{}).filter(([k,v])=>v===true).length}/{Object.keys(sf.checklist||{}).length} completed
+        </div>
+      </div>);
+    }
+    
+    return html;
+  };
+
   return(
     <div className="page-content" key={refreshKey}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
@@ -1589,6 +1708,7 @@ function TicketDetail({ticket, tickets, quotes, jobs, invoices, inspections, sig
           <button className="btn btn-secondary btn-sm" onClick={onBack}>← Back</button>
           <span className="mono" style={{fontSize:18,fontWeight:700,color:AC}}>{localTicket.ref}</span>
           <StagePill s={localTicket.status}/>
+          {hasFieldData && <span className="field-data-badge checkin">📱 Field Data</span>}
         </div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
           <button className="btn btn-secondary btn-sm" onClick={()=>setShowWAPanel(!showWAPanel)}>💬 {showWAPanel?"Close":"WhatsApp"}</button>
@@ -1599,7 +1719,7 @@ function TicketDetail({ticket, tickets, quotes, jobs, invoices, inspections, sig
           {canSignoff && (
             <button className="btn btn-success btn-sm" onClick={()=>setShowSignoffModal(true)}>✅ Sign-Off</button>
           )}
-          <button className="btn btn-pdf btn-sm" onClick={()=>openPrintWindow(buildTicketPdfHtml(localTicket, cfg))}>📄 PDF</button>
+          <button className="btn btn-pdf btn-sm" onClick={()=>openPrintWindow(buildTicketPdfHtml(localTicket, cfg, assessments, fieldSignoffs, checkins))}>📄 PDF</button>
         </div>
       </div>
 
@@ -1638,6 +1758,7 @@ function TicketDetail({ticket, tickets, quotes, jobs, invoices, inspections, sig
             <div className="detail-row"><div className="detail-key">Service</div><div className="detail-val">{SERVICES.find(s=>s.id===localTicket.serviceType)?.label||localTicket.serviceType||"—"}</div></div>
             {renderEditableField("Priority", "priority", localTicket.priority, "select", PRIORITIES)}
             {renderEditableField("Requested Date", "requestedDate", localTicket.requestedDate)}
+            <div className="detail-row"><div className="detail-key">Assigned Team</div><div className="detail-val">{localTicket.assignedTeam || "—"}</div></div>
             <div className="detail-row"><div className="detail-key">Created</div><div className="detail-val" style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10}}>{localTicket.createdAt?new Date(localTicket.createdAt).toLocaleString("en-ZA"):"—"}</div></div>
           </div>
           <div className="card-header" style={{borderTop:"1px solid var(--border)"}}><div className="card-title">📎 Linked</div></div>
@@ -1647,6 +1768,8 @@ function TicketDetail({ticket, tickets, quotes, jobs, invoices, inspections, sig
             {ticketInvoices.length>0&&<div style={{fontSize:12,color:"#F59E0B"}}>💰 {ticketInvoices.length} invoice(s)</div>}
             {ticketInspections.length>0&&<div style={{fontSize:12,color:"#F97316"}}>📸 {ticketInspections.length} inspection(s)</div>}
             {ticketSignoffs.length>0&&<div style={{fontSize:12,color:"#10B981"}}>✅ {ticketSignoffs.length} sign-off(s)</div>}
+            {checkins.length>0&&<div style={{fontSize:12,color:"#3B82F6"}}>📍 {checkins.length} check-in(s)</div>}
+            {assessments.length>0&&<div style={{fontSize:12,color:"#F59E0B"}}>📋 {assessments.length} SLAM(s)</div>}
           </div>
         </div>
 
@@ -1654,7 +1777,7 @@ function TicketDetail({ticket, tickets, quotes, jobs, invoices, inspections, sig
           <div className="card" style={{marginBottom:12}}>
             <div className="card-header">
               <div className="card-title">⏳ Timeline</div>
-              <button className="btn btn-pdf btn-xs" onClick={()=>openPrintWindow(buildTicketPdfHtml(localTicket, cfg))}>📄 PDF</button>
+              <button className="btn btn-pdf btn-xs" onClick={()=>openPrintWindow(buildTicketPdfHtml(localTicket, cfg, assessments, fieldSignoffs, checkins))}>📄 PDF</button>
             </div>
             <div className="card-body" style={{maxHeight:300,overflowY:"auto",padding:"12px 16px"}}>
               {(localTicket.notes||[]).length===0?<div style={{textAlign:"center",color:"var(--text4)",fontSize:12,padding:12}}>No activity yet.</div>:
@@ -1696,6 +1819,18 @@ function TicketDetail({ticket, tickets, quotes, jobs, invoices, inspections, sig
             </div>
           </div>
 
+          {/* Field Data Section - NEW */}
+          {hasFieldData && (
+            <div className="card" style={{marginBottom:12, borderColor: "#00C896", borderWidth: 1}}>
+              <div className="card-header" style={{background:"rgba(0,200,150,0.05)"}}>
+                <div className="card-title">📱 Field Data from Smart Inspection</div>
+              </div>
+              <div className="card-body" style={{padding:"12px 16px"}}>
+                {renderFieldData()}
+              </div>
+            </div>
+          )}
+
           {latestQuote && (
             <div className="card" style={{marginBottom:12}}>
               <div className="card-header">
@@ -1720,7 +1855,7 @@ function TicketDetail({ticket, tickets, quotes, jobs, invoices, inspections, sig
                 <button className="btn btn-success btn-sm btn-block" onClick={()=>setShowSignoffModal(true)}>✅ Client Sign-Off</button>
               )}
               <button className="btn btn-secondary btn-sm btn-block" onClick={()=>setShowWAPanel(!showWAPanel)}>💬 {showWAPanel?"Close":"WhatsApp"}</button>
-              <button className="btn btn-pdf btn-sm btn-block" onClick={()=>openPrintWindow(buildTicketPdfHtml(localTicket, cfg))}>📄 PDF Ticket</button>
+              <button className="btn btn-pdf btn-sm btn-block" onClick={()=>openPrintWindow(buildTicketPdfHtml(localTicket, cfg, assessments, fieldSignoffs, checkins))}>📄 PDF Ticket</button>
             </div>
           </div>
 
@@ -1864,7 +1999,7 @@ function QuoteBuilderModal({ticket,cfg,onClose,onSaved,showToast}){
   );
 }
 
-/* ── SCHEDULE JOB MODAL (AUTO-CREATES JOB IN FIRESTORE) ── */
+/* ── SCHEDULE JOB MODAL ── */
 function ScheduleJobModal({ticket,tickets,cfg,onClose,onSaved,showToast,defaultDate}){
   const [ticketRef,setTicketRef]=useState(ticket?.ref||"");
   const [date,setDate]=useState(defaultDate||new Date().toISOString().slice(0,10));
@@ -1874,7 +2009,6 @@ function ScheduleJobModal({ticket,tickets,cfg,onClose,onSaved,showToast,defaultD
   const [saving,setSaving]=useState(false);
   const pickedTicket=ticket||tickets?.find(t=>t.ref===ticketRef);
 
-  // Auto-populate address when ticket changes
   useEffect(() => {
     if(pickedTicket?.address) setAddress(pickedTicket.address);
   }, [pickedTicket]);
@@ -1883,7 +2017,6 @@ function ScheduleJobModal({ticket,tickets,cfg,onClose,onSaved,showToast,defaultD
     if(!ticketRef){showToast("Select a ticket first","error");return;}
     setSaving(true);
     try{
-      // Create the job in Firestore under mgfc_jobs collection
       const jobData = {
         ticketRef,
         scheduledDate: date,
@@ -1896,7 +2029,6 @@ function ScheduleJobModal({ticket,tickets,cfg,onClose,onSaved,showToast,defaultD
         source: "main_portal"
       };
       const ref = await col("jobs").add(jobData);
-      // Update ticket status
       await fsUpdate("tickets", ticketRef, { 
         status: "scheduled", 
         assignedTeam: team,
