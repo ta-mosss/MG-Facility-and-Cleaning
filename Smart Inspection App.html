@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes" />
+  <meta name="theme-color" content="#FFFFFF" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Smart Inspection · MG Field</title>
+  <link rel="manifest" href="data:application/json,{"name":"Smart Inspection","short_name":"SmartInsp","start_url":"/","display":"standalone","background_color":"#FFFFFF","theme_color":"#FFFFFF","icons":[{"src":"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%2300C896'/%3E%3Cpath d='M30 50l14 14 26-26' stroke='%23fff' stroke-width='8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E","sizes":"192x192","type":"image/svg+xml"}]}" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Inter',sans-serif;background:#F5F7FA;color:#1A2332;padding:0;margin:0;min-height:100vh;overflow-x:hidden;}
+    .app{max-width:480px;margin:0 auto;padding:16px 16px 80px;background:#FFFFFF;min-height:100vh;}
+    .header{display:flex;align-items:center;justify-content:space-between;padding:8px 0 16px;border-bottom:1px solid #E8ECF2;}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;color:#0A1A2F;}
+    .brand small{font-weight:400;font-size:12px;color:#7A8DA0;}
+    .badge{background:#E8ECF2;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;color:#4A5A6E;}
+    .card{background:#FFFFFF;border-radius:16px;padding:16px;margin-bottom:16px;border:1px solid #E8ECF2;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+    .card-title{font-weight:600;font-size:14px;margin-bottom:10px;color:#2A3A4E;display:flex;align-items:center;gap:8px;}
+    .stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;}
+    .stat-box{background:#F8FAFC;border-radius:12px;padding:12px;text-align:center;border:1px solid #E8ECF2;}
+    .stat-num{font-size:22px;font-weight:700;color:#00C896;}
+    .stat-label{font-size:10px;color:#7A8DA0;margin-top:4px;text-transform:uppercase;letter-spacing:0.05em;}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border:none;border-radius:12px;font-weight:600;font-size:14px;width:100%;transition:all 0.15s;cursor:pointer;font-family:inherit;}
+    .btn-primary{background:linear-gradient(135deg,#00C896,#0EA5E9);color:#FFFFFF;}
+    .btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
+    .btn-secondary{background:#E8ECF2;color:#1A2332;}
+    .btn-success{background:#10B981;color:#fff;}
+    .btn-danger{background:#EF4444;color:#fff;}
+    .btn-outline{background:transparent;border:1px solid #E8ECF2;color:#1A2332;}
+    .btn-sm{padding:8px 14px;font-size:12px;width:auto;}
+    .btn-block{width:100%;}
+    .input-group{margin-bottom:14px;}
+    .input-group label{font-size:12px;font-weight:600;color:#4A5A6E;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;}
+    .input-group input,.input-group select,.input-group textarea{width:100%;padding:12px 14px;background:#F8FAFC;border:1px solid #E8ECF2;border-radius:10px;color:#1A2332;font-size:14px;font-family:inherit;}
+    .input-group input:focus,.input-group select:focus,.input-group textarea:focus{outline:none;border-color:#00C896;box-shadow:0 0 0 3px rgba(0,200,150,0.1);}
+    .input-group textarea{resize:vertical;min-height:70px;}
+    .checkbox-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0;}
+    .checkbox-item{display:flex;align-items:center;gap:8px;font-size:13px;color:#1A2332;padding:4px 0;}
+    .checkbox-item input[type="checkbox"]{accent-color:#00C896;width:18px;height:18px;cursor:pointer;}
+    .location-badge{background:#F8FAFC;border-radius:8px;padding:8px 12px;font-size:12px;color:#4A5A6E;display:flex;align-items:center;gap:8px;border:1px solid #E8ECF2;margin-bottom:10px;}
+    .location-badge .dot{width:8px;height:8px;border-radius:50%;background:#00C896;display:inline-block;animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+    .timeline-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #E8ECF2;}
+    .timeline-icon{width:32px;height:32px;border-radius:50%;background:#E8ECF2;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+    .timeline-content{flex:1;}
+    .timeline-title{font-weight:600;font-size:13px;color:#1A2332;}
+    .timeline-meta{font-size:11px;color:#7A8DA0;margin-top:2px;}
+    .timeline-verified{color:#10B981;font-weight:600;font-size:11px;}
+    .photo-grid{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+    .photo-thumb{width:64px;height:64px;border-radius:8px;background:#E8ECF2;overflow:hidden;border:1px solid #E8ECF2;display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;}
+    .photo-thumb img{width:100%;height:100%;object-fit:cover;}
+    .photo-upload-btn{width:64px;height:64px;border-radius:8px;border:1px dashed #D0D8E0;display:flex;align-items:center;justify-content:center;font-size:24px;color:#7A8DA0;cursor:pointer;background:transparent;}
+    .star-row{display:flex;gap:4px;margin:4px 0;}
+    .star-btn{background:transparent;border:none;font-size:24px;color:#D0D8E0;cursor:pointer;transition:0.15s;padding:0 2px;}
+    .star-btn.active{color:#F59E0B;}
+    .star-btn:hover{transform:scale(1.1);}
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);}
+    .modal-box{background:#FFFFFF;border:1px solid #E8ECF2;border-radius:16px;max-width:460px;width:100%;max-height:90vh;overflow-y:auto;padding:20px;}
+    .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+    .modal-header h2{font-size:18px;font-weight:700;color:#1A2332;}
+    .modal-close{background:transparent;border:none;font-size:24px;color:#7A8DA0;cursor:pointer;}
+    .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;background:#FFFFFF;border:1px solid #E8ECF2;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:500;color:#1A2332;box-shadow:0 8px 30px rgba(0,0,0,0.12);max-width:400px;width:90%;text-align:center;}
+    .toast.success{border-color:#10B981;color:#10B981;}
+    .toast.error{border-color:#EF4444;color:#EF4444;}
+    .hidden{display:none !important;}
+    .flex{display:flex;gap:8px;flex-wrap:wrap;}
+    .flex-center{display:flex;align-items:center;justify-content:center;}
+    .gap-8{gap:8px;}
+    .mt-8{margin-top:8px;}
+    .mb-8{margin-bottom:8px;}
+    .text-center{text-align:center;}
+    .text-muted{color:#7A8DA0;font-size:12px;}
+    .text-green{color:#10B981;}
+    .text-gold{color:#F59E0B;}
+    .text-red{color:#EF4444;}
+    .border-top{border-top:1px solid #E8ECF2;padding-top:12px;margin-top:12px;}
+    .nps-row{display:flex;gap:4px;justify-content:center;margin:8px 0;flex-wrap:wrap;}
+    .nps-btn{width:36px;height:36px;border-radius:50%;border:1px solid #E8ECF2;background:transparent;color:#1A2332;font-weight:700;font-size:14px;cursor:pointer;transition:0.15s;}
+    .nps-btn.active{background:#00C896;border-color:#00C896;color:#fff;}
+    .nps-btn:hover{background:#E8ECF2;}
+    .job-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #E8ECF2;cursor:pointer;align-items:center;}
+    .job-row:hover{background:#F8FAFC;margin:0 -8px;padding:10px 8px;border-radius:8px;}
+    .status-badge{font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;}
+    .status-scheduled{background:#E8ECF2;color:#4A5A6E;}
+    .status-progress{background:#DBEAFE;color:#0EA5E9;}
+    .status-completed{background:#D1FAE5;color:#10B981;}
+    .status-closed{background:#F3F4F6;color:#6B7280;}
+    .refresh-btn{background:transparent;border:none;color:#00C896;font-size:18px;cursor:pointer;padding:4px 8px;}
+    .refresh-btn:hover{transform:rotate(90deg);transition:0.3s;}
+    .debug-box{background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:8px 12px;font-size:11px;color:#92400E;margin-bottom:10px;font-family:monospace;white-space:pre-wrap;word-break:break-all;}
+    .tab-bar{display:flex;gap:4px;background:#F8FAFC;border-radius:10px;padding:4px;margin-bottom:12px;}
+    .tab-btn{flex:1;padding:8px 12px;border:none;border-radius:8px;font-weight:600;font-size:12px;cursor:pointer;background:transparent;color:#7A8DA0;transition:0.15s;}
+    .tab-btn.active{background:#FFFFFF;color:#00C896;box-shadow:0 1px 3px rgba(0,0,0,0.08);}
+    @media (max-width:400px){.stat-grid{grid-template-columns:1fr 1fr;}}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBpoDnbWKvWQdvcZnhUZwFr24iox2fWJto",
+  authDomain: "test-bot-49f99.firebaseapp.com",
+  projectId: "test-bot-49f99",
+  storageBucket: "test-bot-49f99.firebasestorage.app",
+  messagingSenderId: "522231357803",
+  appId: "1:522231357803:web:bf65a73d1df7269615ac2e",
+  databaseURL: "https://test-bot-49f99-default-rtdb.firebaseio.com"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+function col(name){ return db.collection("mgfc_" + name); }
+function ts(){ return new Date().toISOString(); }
+
+const TEAMS = ["Team Alpha", "Team Bravo", "Team Charlie", "Team Delta"];
+const TEAM_PASSWORDS = { 
+  "Team Alpha": "alpha123", 
+  "Team Bravo": "bravo123", 
+  "Team Charlie": "charlie123", 
+  "Team Delta": "delta123" 
+};
+
+function getLocation(){
+  return new Promise((resolve) => {
+    if(!navigator.geolocation){ resolve({ lat: -25.7479, lng: 28.2293, accuracy: 1000 }); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }),
+      () => resolve({ lat: -25.7479, lng: 28.2293, accuracy: 1000 }),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
+}
+</script>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+function Toast({ msg, type }){ if(!msg) return null; return <div className={`toast ${type}`}>{msg}</div>; }
+
+function Login({ onLogin }){
+  const [team, setTeam] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const handleLogin = () => {
+    if(!team){ setError("Select a team"); return; }
+    if(TEAM_PASSWORDS[team] && TEAM_PASSWORDS[team] === password){
+      onLogin(team);
+      setError("");
+    } else {
+      setError("Invalid team or password");
+    }
+  };
+  return (
+    <div className="app" style={{ paddingTop: 40, background: "#FFFFFF", minHeight: "100vh" }}>
+      <div className="card" style={{ padding: 24, border: "1px solid #E8ECF2" }}>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <div style={{ fontSize: 40, marginBottom: 8 }}>🔍</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: "#0A1A2F" }}>Smart Inspection</div>
+          <div style={{ fontSize: 13, color: "#7A8DA0" }}>MG Facility & Cleaning · Field Ops</div>
+        </div>
+        <div className="input-group">
+          <label>Team</label>
+          <select value={team} onChange={e => setTeam(e.target.value)}>
+            <option value="">Select your team</option>
+            {TEAMS.map(t => <option key={t}>{t}</option>)}
+          </select>
+        </div>
+        <div className="input-group">
+          <label>Password</label>
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Team password" onKeyDown={e => e.key === "Enter" && handleLogin()} />
+        </div>
+        {error && <div style={{ color: "#EF4444", fontSize: 13, marginBottom: 12 }}>{error}</div>}
+        <button className="btn btn-primary" onClick={handleLogin}>Login →</button>
+        <div style={{ fontSize: 11, color: "#7A8DA0", textAlign: "center", marginTop: 16 }}>GPS · Real-time · Secure</div>
+      </div>
+    </div>
+  );
+}
+
+function SmartInspectionApp(){
+  const [team, setTeam] = useState(null);
+  const [allJobs, setAllJobs] = useState([]);
+  const [activeJob, setActiveJob] = useState(null);
+  const [checkins, setCheckins] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState({ msg: "", type: "" });
+  const [showSLAM, setShowSLAM] = useState(false);
+  const [showSignoff, setShowSignoff] = useState(false);
+  const [selectedJobForSignoff, setSelectedJobForSignoff] = useState(null);
+  const [showJobDetail, setShowJobDetail] = useState(false);
+  const [selectedJobDetail, setSelectedJobDetail] = useState(null);
+  const [location, setLocation] = useState(null);
+  const [tracking, setTracking] = useState(false);
+  const [watchId, setWatchId] = useState(null);
+  const [ticketsMap, setTicketsMap] = useState({});
+  const [lastRefresh, setLastRefresh] = useState(Date.now());
+  const [debugInfo, setDebugInfo] = useState("");
+  const [activeTab, setActiveTab] = useState("today");
+
+  const [slamItems, setSlamItems] = useState({
+    "Floors": false, "Walls": false, "Windows": false, "Doors": false,
+    "Cabinets": false, "Countertops": false, "Appliances": false, "Plumbing": false,
+    "Electrical": false, "Furniture": false, "Other": false
+  });
+  const [slamNotes, setSlamNotes] = useState("");
+  const [slamPhotos, setSlamPhotos] = useState([]);
+
+  const [signoffItems, setSignoffItems] = useState({
+    "Floors clean": false, "Surfaces dusted": false, "Windows clean": false,
+    "Kitchen sanitized": false, "Bathrooms clean": false, "Trash removed": false,
+    "Furniture arranged": false, "Appliances clean": false, "Carpets vacuumed": false
+  });
+  const [nps, setNps] = useState(0);
+  const [csat, setCsat] = useState(0);
+  const [ces, setCes] = useState(0);
+  const [signoffFeedback, setSignoffFeedback] = useState("");
+
+  const fileInputRef = useRef(null);
+
+  // Fetch tickets
+  useEffect(() => {
+    const unsub = col("tickets").onSnapshot(snap => {
+      const map = {};
+      snap.docs.forEach(d => { map[d.id] = { ...d.data(), id: d.id }; });
+      setTicketsMap(map);
+    });
+    return () => unsub();
+  }, []);
+
+  // Fetch ALL jobs for the team (not just today)
+  useEffect(() => {
+    if(!team) {
+      setLoading(false);
+      return;
+    }
+    
+    console.log(`🔍 Fetching ALL jobs for team: ${team} from mgfc_jobs`);
+    
+    const unsub = col("jobs")
+      .where("team", "==", team)
+      .onSnapshot(snap => {
+        const data = snap.docs.map(d => ({ 
+          id: d.id, 
+          ...d.data() 
+        }));
+        console.log(`📋 Found ${data.length} jobs for ${team}:`, data);
+        setAllJobs(data);
+        
+        // Find active job (scheduled or in-progress)
+        const active = data.find(j => j.status === "in-progress" || j.status === "scheduled");
+        setActiveJob(active || null);
+        
+        // Build debug info
+        let debug = `Total jobs: ${data.length}\n`;
+        data.forEach(j => {
+          debug += `  - ${j.ticketRef} | ${j.status} | ${j.scheduledDate}\n`;
+        });
+        setDebugInfo(debug);
+        
+        setLoading(false);
+      }, error => {
+        console.error("Jobs fetch error:", error);
+        setDebugInfo(`❌ Error: ${error.message}`);
+        setLoading(false);
+      });
+    return () => unsub();
+  }, [team, lastRefresh]);
+
+  // Fetch check-ins
+  useEffect(() => {
+    if(!team) return;
+    const unsub = col("checkins")
+      .where("team", "==", team)
+      .orderBy("timestamp", "desc")
+      .limit(50)
+      .onSnapshot(snap => {
+        setCheckins(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      });
+    return () => unsub();
+  }, [team]);
+
+  // GPS Tracking
+  const startTracking = useCallback(async () => {
+    if(!navigator.geolocation) { showToast("GPS not available", "error"); return; }
+    const loc = await getLocation();
+    setLocation(loc);
+    const id = navigator.geolocation.watchPosition(
+      pos => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }),
+      () => {},
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+    setWatchId(id);
+    setTracking(true);
+    showToast("GPS tracking started", "success");
+  }, []);
+
+  const stopTracking = () => {
+    if(watchId) navigator.geolocation.clearWatch(watchId);
+    setWatchId(null);
+    setTracking(false);
+    showToast("GPS tracking stopped", "success");
+  };
+
+  useEffect(() => {
+    return () => { if(watchId) navigator.geolocation.clearWatch(watchId); };
+  }, [watchId]);
+
+  const showToast = (msg, type = "success") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast({ msg: "", type: "" }), 3500);
+  };
+
+  const refreshJobs = () => {
+    setLastRefresh(Date.now());
+    showToast("🔄 Refreshing jobs...", "success");
+  };
+
+  // Check In / Out
+  const handleCheckIn = async () => {
+    if(!activeJob){ showToast("No active job assigned", "error"); return; }
+    const loc = await getLocation();
+    await col("checkins").add({
+      team,
+      jobId: activeJob.id,
+      ticketRef: activeJob.ticketRef || "N/A",
+      type: "checkin",
+      timestamp: ts(),
+      location: loc,
+      verified: true,
+      note: "Checked in"
+    });
+    await col("jobs").doc(activeJob.id).update({ status: "in-progress", startedAt: ts() });
+    setActiveJob({ ...activeJob, status: "in-progress" });
+    setAllJobs(allJobs.map(j => j.id === activeJob.id ? { ...j, status: "in-progress" } : j));
+    showToast(`✅ Checked in at ${new Date().toLocaleTimeString()}`);
+  };
+
+  const handleCheckOut = async () => {
+    if(!activeJob){ showToast("No active job", "error"); return; }
+    const loc = await getLocation();
+    await col("checkins").add({
+      team,
+      jobId: activeJob.id,
+      ticketRef: activeJob.ticketRef || "N/A",
+      type: "checkout",
+      timestamp: ts(),
+      location: loc,
+      verified: true,
+      note: "Checked out"
+    });
+    await col("jobs").doc(activeJob.id).update({ status: "completed", completedAt: ts() });
+    setActiveJob({ ...activeJob, status: "completed" });
+    setAllJobs(allJobs.map(j => j.id === activeJob.id ? { ...j, status: "completed" } : j));
+    showToast(`✅ Checked out at ${new Date().toLocaleTimeString()}`);
+    setSelectedJobForSignoff(activeJob);
+    setShowSignoff(true);
+  };
+
+  // SLAM
+  const handleSLAMSubmit = async () => {
+    if(!activeJob){ showToast("No active job", "error"); return; }
+    const loc = await getLocation();
+    const data = {
+      jobId: activeJob.id,
+      ticketRef: activeJob.ticketRef || "N/A",
+      team,
+      items: slamItems,
+      notes: slamNotes,
+      photos: slamPhotos,
+      location: loc,
+      timestamp: ts(),
+      type: "slam"
+    };
+    await col("assessments").add(data);
+    await col("jobs").doc(activeJob.id).update({ slamDone: true, slamAt: ts() });
+    showToast("✅ SLAM assessment saved");
+    setShowSLAM(false);
+    setSlamItems(Object.keys(slamItems).reduce((acc,k) => ({...acc, [k]: false}), {}));
+    setSlamNotes("");
+    setSlamPhotos([]);
+  };
+
+  // Signoff
+  const handleSignoffSubmit = async () => {
+    if(!selectedJobForSignoff){ showToast("No job selected", "error"); return; }
+    const done = Object.values(signoffItems).filter(Boolean).length;
+    const total = Object.keys(signoffItems).length;
+    if(done < total){ showToast("Please complete all checklist items", "error"); return; }
+    if(nps === 0){ showToast("Please provide NPS rating", "error"); return; }
+    if(csat === 0){ showToast("Please provide CSAT rating", "error"); return; }
+    if(ces === 0){ showToast("Please provide CES rating", "error"); return; }
+    const loc = await getLocation();
+    const signatureData = await captureSignature();
+    const data = {
+      jobId: selectedJobForSignoff.id,
+      ticketRef: selectedJobForSignoff.ticketRef || "N/A",
+      team,
+      checklist: signoffItems,
+      nps,
+      csat,
+      ces,
+      feedback: signoffFeedback,
+      signature: signatureData,
+      location: loc,
+      timestamp: ts(),
+      type: "signoff"
+    };
+    await col("signoffs").add(data);
+    await col("jobs").doc(selectedJobForSignoff.id).update({ status: "closed", signedOff: true, signoffAt: ts() });
+    if(selectedJobForSignoff.ticketRef){
+      try {
+        await col("tickets").doc(selectedJobForSignoff.ticketRef).update({ 
+          status: "closed", 
+          rating: nps, 
+          feedback: signoffFeedback,
+          closedAt: ts()
+        });
+      } catch(e) { console.log("Ticket update:", e); }
+    }
+    setAllJobs(allJobs.map(j => j.id === selectedJobForSignoff.id ? { ...j, status: "closed", signedOff: true } : j));
+    showToast("✅ Sign-off complete! Thank you.");
+    setShowSignoff(false);
+    setSelectedJobForSignoff(null);
+    setSignoffItems(Object.keys(signoffItems).reduce((acc,k) => ({...acc, [k]: false}), {}));
+    setNps(0); setCsat(0); setCes(0);
+    setSignoffFeedback("");
+  };
+
+  const captureSignature = () => {
+    const canvas = document.getElementById("signature-pad");
+    if(canvas) return canvas.toDataURL("image/png");
+    return null;
+  };
+
+  const handlePhotoUpload = (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setSlamPhotos(prev => [...prev, ev.target.result]);
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = "";
+  };
+
+  // ─── RENDER ───
+  if(!team){
+    return <Login onLogin={(t) => { setTeam(t); startTracking(); }} />;
+  }
+
+  if(showJobDetail && selectedJobDetail){
+    return <JobDetailView 
+      job={selectedJobDetail} 
+      onBack={() => setShowJobDetail(false)} 
+      team={team} 
+      ticketsMap={ticketsMap}
+      showToast={showToast}
+    />;
+  }
+
+  const todayStr = new Date().toISOString().slice(0,10);
+  const todayJobs = allJobs.filter(j => j.scheduledDate === todayStr);
+  const allActiveJobs = allJobs.filter(j => j.status === "in-progress" || j.status === "scheduled");
+  const completedJobs = allJobs.filter(j => j.status === "completed" || j.status === "closed");
+  const inProgressJobs = allJobs.filter(j => j.status === "in-progress");
+
+  // Display jobs based on active tab
+  const displayJobs = activeTab === "today" ? todayJobs : allJobs;
+
+  return (
+    <div className="app" style={{ background: "#FFFFFF" }}>
+      <div className="header">
+        <div className="brand">
+          🔍 Smart Inspection
+          <small>· {team}</small>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button className="refresh-btn" onClick={refreshJobs} title="Refresh jobs">⟳</button>
+          <div className="badge">{tracking ? "🟢 GPS" : "🔴 GPS"}</div>
+        </div>
+      </div>
+
+      {/* GPS Status */}
+      <div className="location-badge">
+        <span className="dot"></span>
+        {location ? `📍 ${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}` : "Acquiring GPS..."}
+        <span style={{ marginLeft: "auto", fontSize: 11 }}>
+          {tracking ? "Live" : "Off"}
+          <button className="btn btn-sm btn-outline" style={{ marginLeft: 8, padding: "4px 10px" }} onClick={tracking ? stopTracking : startTracking}>
+            {tracking ? "Stop" : "Start"}
+          </button>
+        </span>
+      </div>
+
+      {/* Debug Info */}
+      {debugInfo && (
+        <div className="debug-box">
+          <strong>🔍 Debug:</strong> {debugInfo}
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="stat-grid">
+        <div className="stat-box"><div className="stat-num">{allJobs.length}</div><div className="stat-label">Total Jobs</div></div>
+        <div className="stat-box"><div className="stat-num" style={{ color: "#F59E0B" }}>{inProgressJobs.length}</div><div className="stat-label">In Progress</div></div>
+        <div className="stat-box"><div className="stat-num" style={{ color: "#10B981" }}>{completedJobs.length}</div><div className="stat-label">Completed</div></div>
+      </div>
+
+      {/* Active Job Card */}
+      {activeJob && activeJob.status !== "closed" && (
+        <div className="card" style={{ borderColor: "#00C896", borderWidth: 2 }}>
+          <div className="card-title">🟢 Active Job</div>
+          <div style={{ fontWeight: 600, fontSize: 16 }}>{activeJob.ticketRef || "No Ref"}</div>
+          <div style={{ fontSize: 13, color: "#4A5A6E", margin: "4px 0" }}>
+            {ticketsMap[activeJob.ticketRef]?.address || activeJob.address || "Address TBD"} · {activeJob.scheduledDate}
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+            {activeJob.status === "scheduled" && (
+              <>
+                <button className="btn btn-primary btn-sm" onClick={handleCheckIn}>📥 Check In</button>
+                <button className="btn btn-secondary btn-sm" onClick={() => setShowSLAM(true)}>📋 SLAM</button>
+              </>
+            )}
+            {activeJob.status === "in-progress" && (
+              <>
+                <button className="btn btn-success btn-sm" onClick={handleCheckOut}>📤 Check Out</button>
+                <button className="btn btn-secondary btn-sm" onClick={() => setShowSLAM(true)}>📋 SLAM</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Jobs List with Tabs */}
+      <div className="card">
+        <div className="card-title">
+          📋 Jobs
+          <span style={{ fontSize: 11, color: "#7A8DA0", fontWeight: 400, marginLeft: "auto" }}>
+            {displayJobs.length} jobs
+          </span>
+        </div>
+        
+        {/* Tabs */}
+        <div className="tab-bar">
+          <button className={`tab-btn ${activeTab === "today" ? "active" : ""}`} onClick={() => setActiveTab("today")}>
+            📅 Today ({todayJobs.length})
+          </button>
+          <button className={`tab-btn ${activeTab === "all" ? "active" : ""}`} onClick={() => setActiveTab("all")}>
+            📋 All ({allJobs.length})
+          </button>
+        </div>
+
+        {displayJobs.length === 0 ? (
+          <div className="text-muted text-center" style={{ padding: 16 }}>
+            No jobs found for {team}
+            <br />
+            <span style={{ fontSize: 11, color: "#7A8DA0" }}>
+              {activeTab === "today" ? "Try switching to 'All' tab" : "Schedule a job from the main portal"}
+            </span>
+          </div>
+        ) : (
+          displayJobs.map(j => {
+            const ticket = ticketsMap[j.ticketRef];
+            return (
+              <div key={j.id} className="job-row" onClick={() => { setSelectedJobDetail(j); setShowJobDetail(true); }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 13 }}>{j.ticketRef || "N/A"}</div>
+                  <div style={{ fontSize: 11, color: "#7A8DA0" }}>
+                    {ticket?.clientName || j.clientName || "—"} · {ticket?.address || j.address || "—"}
+                  </div>
+                  <div style={{ fontSize: 10, color: "#7A8DA0" }}>
+                    📅 {j.scheduledDate} {j.scheduledTime ? `🕐 ${j.scheduledTime}` : ""}
+                  </div>
+                </div>
+                <div>
+                  {j.status === "scheduled" && <span className="status-badge status-scheduled">⏳ Scheduled</span>}
+                  {j.status === "in-progress" && <span className="status-badge status-progress">🔄 In Progress</span>}
+                  {j.status === "completed" && <span className="status-badge status-completed">✅ Completed</span>}
+                  {j.status === "closed" && <span className="status-badge status-closed">🔒 Closed</span>}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Check-in Timeline */}
+      <div className="card">
+        <div className="card-title">⏱️ Check-in Timeline</div>
+        {checkins.length === 0 ? (
+          <div className="text-muted text-center" style={{ padding: 12 }}>No check-ins yet</div>
+        ) : (
+          checkins.slice(0, 10).map(c => (
+            <div key={c.id} className="timeline-item">
+              <div className="timeline-icon">{c.type === "checkin" ? "📥" : "📤"}</div>
+              <div className="timeline-content">
+                <div className="timeline-title">{c.type === "checkin" ? "Checked In" : "Checked Out"} · {c.ticketRef}</div>
+                <div className="timeline-meta">{c.timestamp ? new Date(c.timestamp).toLocaleString() : ""}</div>
+                {c.verified && <div className="timeline-verified">✅ GPS Verified</div>}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Modals */}
+      {showSLAM && (
+        <Modal title="📋 Pre-Cleaning SLAM" onClose={() => setShowSLAM(false)}>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontWeight: 600, fontSize: 14, color: "#F59E0B" }}>⚠️ Document any existing damage or issues</div>
+            <div style={{ fontSize: 12, color: "#7A8DA0" }}>Check all items that are in GOOD condition. Leave unchecked if damaged or missing.</div>
+          </div>
+          <div className="checkbox-grid">
+            {Object.keys(slamItems).map(k => (
+              <label key={k} className="checkbox-item">
+                <input type="checkbox" checked={slamItems[k]} onChange={e => setSlamItems({...slamItems, [k]: e.target.checked})} />
+                {k}
+              </label>
+            ))}
+          </div>
+          <div className="input-group">
+            <label>Notes / Observations</label>
+            <textarea value={slamNotes} onChange={e => setSlamNotes(e.target.value)} placeholder="Describe any damage, missing items, or special notes..." />
+          </div>
+          <div className="input-group">
+            <label>Photos</label>
+            <div className="flex" style={{ flexWrap: "wrap" }}>
+              {slamPhotos.map((p, i) => (
+                <div key={i} className="photo-thumb"><img src={p} alt="slam" /></div>
+              ))}
+              <button className="photo-upload-btn" onClick={() => fileInputRef.current.click()}>📷</button>
+              <input type="file" ref={fileInputRef} accept="image/*" multiple onChange={handlePhotoUpload} style={{ display: "none" }} />
+            </div>
+          </div>
+          <button className="btn btn-primary" onClick={handleSLAMSubmit}>Save SLAM Assessment</button>
+        </Modal>
+      )}
+
+      {showSignoff && selectedJobForSignoff && (
+        <Modal title="✅ Client Sign-Off" onClose={() => { setShowSignoff(false); setSelectedJobForSignoff(null); }} wide>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontWeight: 600 }}>{selectedJobForSignoff.ticketRef}</div>
+            <div className="text-muted">{ticketsMap[selectedJobForSignoff.ticketRef]?.address || selectedJobForSignoff.address}</div>
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <div className="card-title" style={{ fontSize: 13 }}>🧹 Cleaning Checklist</div>
+            <div className="checkbox-grid">
+              {Object.keys(signoffItems).map(k => (
+                <label key={k} className="checkbox-item">
+                  <input type="checkbox" checked={signoffItems[k]} onChange={e => setSignoffItems({...signoffItems, [k]: e.target.checked})} />
+                  {k}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <div className="card-title" style={{ fontSize: 13 }}>⭐ NPS · How likely to recommend?</div>
+            <div className="nps-row">
+              {[0,1,2,3,4,5,6,7,8,9,10].map(n => (
+                <button key={n} className={`nps-btn ${nps === n ? "active" : ""}`} onClick={() => setNps(n)}>{n}</button>
+              ))}
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#7A8DA0" }}>
+              <span>Not likely</span><span>Very likely</span>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <div className="card-title" style={{ fontSize: 13 }}>😊 CSAT · How satisfied?</div>
+            <div className="star-row">
+              {[1,2,3,4,5].map(n => (
+                <button key={n} className={`star-btn ${csat >= n ? "active" : ""}`} onClick={() => setCsat(n)}>★</button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <div className="card-title" style={{ fontSize: 13 }}>⚡ CES · Effort to complete?</div>
+            <div className="star-row">
+              {[1,2,3,4,5].map(n => (
+                <button key={n} className={`star-btn ${ces >= n ? "active" : ""}`} onClick={() => setCes(n)}>★</button>
+              ))}
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#7A8DA0" }}>
+              <span>Very difficult</span><span>Very easy</span>
+            </div>
+          </div>
+
+          <div className="input-group">
+            <label>Feedback</label>
+            <textarea value={signoffFeedback} onChange={e => setSignoffFeedback(e.target.value)} placeholder="Any additional feedback..." rows={2} />
+          </div>
+
+          <div className="input-group">
+            <label>Client Signature</label>
+            <div style={{ background: "#F8FAFC", borderRadius: 10, border: "1px solid #E8ECF2", padding: 4 }}>
+              <canvas id="signature-pad" width="400" height="120" style={{ width: "100%", touchAction: "none", borderRadius: 8 }} />
+              <button className="btn btn-sm btn-outline" style={{ marginTop: 4 }} onClick={() => { const c = document.getElementById("signature-pad"); const ctx = c.getContext("2d"); ctx.clearRect(0,0,c.width,c.height); }}>Clear</button>
+            </div>
+          </div>
+
+          <button className="btn btn-primary" onClick={handleSignoffSubmit}>✅ Complete Sign-Off</button>
+        </Modal>
+      )}
+
+      <Toast msg={toast.msg} type={toast.type} />
+    </div>
+  );
+}
+
+function JobDetailView({ job, onBack, team, ticketsMap, showToast }){
+  const [assessments, setAssessments] = useState([]);
+  const [signoffs, setSignoffs] = useState([]);
+
+  useEffect(() => {
+    const unsub1 = col("assessments").where("jobId", "==", job.id).onSnapshot(snap => setAssessments(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const unsub2 = col("signoffs").where("jobId", "==", job.id).onSnapshot(snap => setSignoffs(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    return () => { unsub1(); unsub2(); };
+  }, [job.id]);
+
+  const ticket = ticketsMap[job.ticketRef];
+
+  return (
+    <div className="app" style={{ background: "#FFFFFF" }}>
+      <div className="header" style={{ borderBottom: "none", paddingBottom: 8 }}>
+        <button className="btn btn-sm btn-outline" onClick={onBack}>← Back</button>
+        <span style={{ fontWeight: 600 }}>{job.ticketRef}</span>
+        <span className="badge">{job.status}</span>
+      </div>
+
+      <div className="card">
+        <div className="card-title">📍 Job Details</div>
+        <div style={{ fontSize: 14 }}>{ticket?.address || job.address || "Address not set"}</div>
+        <div className="text-muted">{job.scheduledDate} · {job.scheduledTime || ""} · {job.team}</div>
+        {ticket?.clientName && <div className="text-muted">Client: {ticket.clientName}</div>}
+        {job.slamDone && <div className="text-green" style={{ marginTop: 4 }}>✅ SLAM completed</div>}
+        {job.signedOff && <div className="text-green">✅ Signed off</div>}
+      </div>
+
+      {assessments.length > 0 && (
+        <div className="card">
+          <div className="card-title">📋 SLAM Assessment</div>
+          {assessments.map(a => (
+            <div key={a.id}>
+              <div style={{ fontSize: 13, color: "#7A8DA0" }}>{a.timestamp ? new Date(a.timestamp).toLocaleString() : ""}</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, margin: "6px 0" }}>
+                {Object.entries(a.items || {}).filter(([k,v]) => v === false).map(([k]) => (
+                  <span key={k} style={{ background: "#FEE2E2", padding: "2px 10px", borderRadius: 12, fontSize: 11, color: "#EF4444" }}>⚠️ {k}</span>
+                ))}
+                {Object.entries(a.items || {}).filter(([k,v]) => v === true).map(([k]) => (
+                  <span key={k} style={{ background: "#D1FAE5", padding: "2px 10px", borderRadius: 12, fontSize: 11, color: "#10B981" }}>✅ {k}</span>
+                ))}
+              </div>
+              {a.notes && <div className="text-muted" style={{ fontSize: 12 }}>📝 {a.notes}</div>}
+              {a.photos && a.photos.length > 0 && (
+                <div className="photo-grid">
+                  {a.photos.map((p, i) => <div key={i} className="photo-thumb"><img src={p} alt="slam" /></div>)}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {signoffs.length > 0 && (
+        <div className="card">
+          <div className="card-title">⭐ Sign-off & Ratings</div>
+          {signoffs.map(s => (
+            <div key={s.id}>
+              <div className="text-muted">{s.timestamp ? new Date(s.timestamp).toLocaleString() : ""}</div>
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap", margin: "6px 0" }}>
+                <span>NPS: <strong>{s.nps}/10</strong></span>
+                <span>CSAT: <strong>{'★'.repeat(s.csat)}{'☆'.repeat(5-s.csat)}</strong></span>
+                <span>CES: <strong>{'★'.repeat(s.ces)}{'☆'.repeat(5-s.ces)}</strong></span>
+              </div>
+              {s.feedback && <div className="text-muted">💬 {s.feedback}</div>}
+              {s.signature && <div style={{ marginTop: 4, background: "#F8FAFC", borderRadius: 8, padding: 4, maxWidth: 200 }}><img src={s.signature} alt="sig" style={{ width: "100%" }} /></div>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {job.status === "in-progress" && (
+        <button className="btn btn-success" onClick={async () => {
+          const loc = await getLocation();
+          await col("checkins").add({ team, jobId: job.id, ticketRef: job.ticketRef, type: "checkout", timestamp: ts(), location: loc, verified: true });
+          await col("jobs").doc(job.id).update({ status: "completed", completedAt: ts() });
+          showToast("Checked out");
+          onBack();
+        }}>📤 Check Out & Complete</button>
+      )}
+    </div>
+  );
+}
+
+function Modal({ title, onClose, wide, children }){
+  return (
+    <div className="modal-overlay" onClick={e => { if(e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-box" style={{ maxWidth: wide ? 480 : 400 }}>
+        <div className="modal-header">
+          <h2>{title}</h2>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function SignatureSetup(){
+  useEffect(() => {
+    const canvas = document.getElementById("signature-pad");
+    if(!canvas) return;
+    const ctx = canvas.getContext("2d");
+    let drawing = false;
+    const getXY = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const src = e.touches ? e.touches[0] : e;
+      return [src.clientX - rect.left, src.clientY - rect.top];
+    };
+    const start = (e) => { e.preventDefault(); drawing = true; const [x,y] = getXY(e); ctx.beginPath(); ctx.moveTo(x,y); };
+    const move = (e) => { e.preventDefault(); if(!drawing) return; const [x,y] = getXY(e); ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.strokeStyle = "#00C896"; ctx.lineTo(x,y); ctx.stroke(); };
+    const stop = () => { drawing = false; };
+    canvas.addEventListener("mousedown", start);
+    canvas.addEventListener("mousemove", move);
+    canvas.addEventListener("mouseup", stop);
+    canvas.addEventListener("touchstart", start, { passive: false });
+    canvas.addEventListener("touchmove", move, { passive: false });
+    canvas.addEventListener("touchend", stop);
+    return () => {
+      canvas.removeEventListener("mousedown", start);
+      canvas.removeEventListener("mousemove", move);
+      canvas.removeEventListener("mouseup", stop);
+      canvas.removeEventListener("touchstart", start);
+      canvas.removeEventListener("touchmove", move);
+      canvas.removeEventListener("touchend", stop);
+    };
+  }, []);
+  return null;
+}
+
+function Root(){
+  return (
+    <>
+      <SignatureSetup />
+      <SmartInspectionApp />
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Root />);
+</script>
+</body>
+</html>

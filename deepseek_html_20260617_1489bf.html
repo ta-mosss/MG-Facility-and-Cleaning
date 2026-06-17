@@ -1,0 +1,2812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>MG Facility & Cleaning — Operations Center</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{font-family:'Plus Jakarta Sans',sans-serif;transition:background 0.3s,color 0.3s;}
+body.dark{--bg:#050810;--bg2:#080D18;--bg3:#0D1624;--bg4:#050810;--border:#0F1C2E;--border2:#1E2A3A;--text:#E2E8F0;--text2:#94A3B8;--text3:#475569;--text4:#334155;--card:#080D18;--sidebar:#080D18;color:#E2E8F0;background:#050810;}
+body.light{--bg:#F0F4F8;--bg2:#FFFFFF;--bg3:#EBF0F7;--bg4:#F8FAFC;--border:#DDE3EE;--border2:#C8D1E0;--text:#1A2332;--text2:#4A5568;--text3:#718096;--text4:#A0AEC0;--card:#FFFFFF;--sidebar:#FFFFFF;color:#1A2332;background:#F0F4F8;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+a{text-decoration:none;color:inherit;}
+button{cursor:pointer;font-family:inherit;}
+input,select,textarea{font-family:inherit;}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#00C896!important;box-shadow:0 0 0 3px rgba(0,200,150,0.1)!important;}
+input[type="file"]{display:none;}
+input[type="date"]::-webkit-calendar-picker-indicator,input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(0.4);}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+@keyframes slideIn{from{opacity:0;transform:translateX(16px);}to{opacity:1;transform:translateX(0);}}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+@keyframes toastIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.fu{animation:fadeUp 0.35s ease forwards;}
+.si{animation:slideIn 0.3s ease forwards;}
+.app-shell{display:flex;min-height:100vh;}
+.sidebar{width:240px;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;height:100vh;position:sticky;top:0;}
+.sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid var(--border);}
+.sidebar-logo .brand{display:flex;align-items:center;gap:10px;}
+.sidebar-logo .icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#00C896,#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.sidebar-logo .name{font-size:13px;font-weight:700;color:var(--text);letter-spacing:-0.01em;line-height:1.25;}
+.sidebar-logo .sub{font-size:10px;color:var(--text3);font-weight:500;letter-spacing:0.04em;text-transform:uppercase;}
+.sidebar-nav{flex:1;padding:12px 10px;overflow-y:auto;}
+.nav-section{margin-bottom:16px;}
+.nav-label{font-size:10px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:0.1em;padding:0 8px;margin-bottom:6px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;font-size:13px;font-weight:500;color:var(--text3);cursor:pointer;transition:all 0.15s;border:none;background:transparent;width:100%;text-align:left;}
+.nav-item:hover{background:var(--bg3);color:var(--text2);}
+.nav-item.active{background:rgba(0,200,150,0.1);color:#00C896;font-weight:600;}
+.nav-item .ni{font-size:16px;flex-shrink:0;width:20px;text-align:center;}
+.nav-item .badge{margin-left:auto;background:#EF4444;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;font-family:'IBM Plex Mono',monospace;}
+.sidebar-bottom{padding:12px 10px;border-top:1px solid var(--border);}
+.status-pill{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg3);border-radius:8px;}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#00C896;box-shadow:0 0 6px #00C896;animation:pulse 2s infinite;}
+.status-text{font-size:11px;color:var(--text3);font-weight:500;}
+.topbar{height:56px;background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;}
+.topbar-left{display:flex;align-items:center;gap:12px;}
+.topbar-title{font-size:16px;font-weight:700;color:var(--text);}
+.topbar-sub{font-size:12px;color:var(--text3);}
+.topbar-right{display:flex;align-items:center;gap:8px;}
+.content-area{flex:1;display:flex;flex-direction:column;min-width:0;min-height:100vh;}
+.page-content{flex:1;overflow-y:auto;padding:24px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;}
+.card-body{padding:20px;}
+.card-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.card-title{font-size:14px;font-weight:700;color:var(--text);}
+.stats-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+.stat-val{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;color:var(--text);margin-bottom:2px;}
+.stat-lbl{font-size:11px;color:var(--text3);font-weight:500;}
+.stat-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px;}
+.form-grid.cols3{grid-template-columns:1fr 1fr 1fr;}
+.form-grid.cols4{grid-template-columns:1fr 1fr 1fr 1fr;}
+.form-field{display:flex;flex-direction:column;gap:5px;}
+.form-field.span2{grid-column:1/-1;}
+.field-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;}
+.field-input{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 13px;color:var(--text);font-size:13px;transition:border 0.2s,box-shadow 0.2s;width:100%;}
+.field-input::placeholder{color:var(--text4);}
+select.field-input{cursor:pointer;}
+textarea.field-input{resize:vertical;min-height:88px;line-height:1.6;}
+.field-error{font-size:11px;color:#F87171;margin-top:2px;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:none;border-radius:8px;font-weight:600;font-family:inherit;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+.btn-primary{background:linear-gradient(135deg,#00C896,#0EA5E9);color:#050810;padding:10px 20px;font-size:13px;}
+.btn-primary:disabled{opacity:0.4;cursor:not-allowed;}
+.btn-secondary{background:transparent;border:1px solid var(--border);color:var(--text2);padding:9px 18px;font-size:13px;}
+.btn-secondary:hover{border-color:var(--border2);color:var(--text);}
+.btn-ghost{background:transparent;color:var(--text3);padding:8px 14px;font-size:13px;border:none;}
+.btn-ghost:hover{color:var(--text2);}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.btn-xs{padding:4px 9px;font-size:11px;}
+.btn-wa{background:#25D366;color:#fff;padding:10px 18px;font-size:13px;border-radius:8px;}
+.btn-email{background:#3B82F6;color:#fff;padding:10px 18px;font-size:13px;border-radius:8px;}
+.btn-danger{background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#F87171;padding:8px 14px;font-size:12px;}
+.btn-danger:hover{background:rgba(239,68,68,0.25);}
+.btn-pdf{background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);color:#FB923C;padding:8px 14px;font-size:12px;}
+.btn-block{width:100%;}
+.btn-success{background:#22C55E;color:#fff;padding:8px 14px;font-size:12px;border-radius:8px;border:none;cursor:pointer;font-weight:600;}
+.btn-success:hover{background:#16A34A;}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:0.05em;}
+.tbl{width:100%;border-collapse:collapse;}
+.tbl th{font-size:10px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:0.08em;padding:10px 14px;border-bottom:1px solid var(--border);text-align:left;}
+.tbl td{padding:11px 14px;border-bottom:1px solid var(--bg);font-size:13px;color:var(--text2);vertical-align:middle;}
+.tbl tr:hover td{background:rgba(0,200,150,0.02);}
+.tbl tr.selected td{background:rgba(0,200,150,0.04);}
+.mono{font-family:'IBM Plex Mono',monospace;font-size:11px;}
+.detail-row{display:flex;padding:8px 0;border-bottom:1px solid var(--border);}
+.detail-key{font-size:11px;color:var(--text3);width:120px;flex-shrink:0;padding-top:1px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;}
+.detail-val{font-size:12px;color:var(--text2);flex:1;}
+.section-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+.section-num{width:28px;height:28px;border-radius:7px;background:rgba(0,200,150,0.1);border:1px solid rgba(0,200,150,0.25);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:#00C896;flex-shrink:0;}
+.section-title{font-size:14px;font-weight:700;color:var(--text);}
+.radio-chips{display:flex;gap:8px;flex-wrap:wrap;padding-top:2px;}
+.chip{padding:7px 14px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);color:var(--text3);transition:all 0.2s;user-select:none;}
+.chip.active{border-color:#00C896;background:rgba(0,200,150,0.08);color:#00C896;font-weight:600;}
+.searchbar{position:relative;}
+.searchbar input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px 9px 36px;color:var(--text);font-size:13px;}
+.searchbar::before{content:"⌕";position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text4);font-size:15px;}
+.toast{position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,0.5);animation:toastIn 0.3s ease;}
+.toast.ok{background:#00C896;color:#050810;}
+.toast.error{background:#EF4444;color:#fff;}
+.toast.info{background:#0EA5E9;color:#fff;}
+.note-item{background:var(--bg);border-radius:8px;padding:10px 12px;margin-bottom:6px;border:1px solid var(--border);}
+.note-text{font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:4px;}
+.note-meta{font-size:10px;color:var(--text4);font-family:'IBM Plex Mono',monospace;}
+.divider{height:1px;background:var(--border);margin:16px 0;}
+.photo-drop{border:2px dashed var(--border2);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:all 0.2s;}
+.photo-drop:hover,.photo-drop.over{border-color:#00C896;background:rgba(0,200,150,0.03);}
+.photo-grid{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+.photo-thumb{position:relative;}
+.photo-thumb img{width:72px;height:72px;object-fit:cover;border-radius:7px;border:1px solid rgba(0,200,150,0.3);}
+.photo-rm{position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:#EF4444;border:none;color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:700;}
+.wa-preview{background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:14px 16px;}
+.wa-bubble{background:rgba(0,200,150,0.08);border-radius:12px 12px 12px 2px;padding:10px 14px;font-size:12px;color:var(--text2);line-height:1.7;white-space:pre-wrap;font-family:'IBM Plex Mono',monospace;}
+.spinner-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg);flex-direction:column;gap:16px;}
+.spinner{width:36px;height:36px;border-radius:50%;border:3px solid rgba(0,200,150,0.2);border-top-color:#00C896;animation:spin 0.75s linear infinite;}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);}
+.modal-box{background:var(--card);border:1px solid var(--border);border-radius:14px;max-width:640px;width:100%;max-height:88vh;overflow-y:auto;}
+.modal-box.wide{max-width:880px;}
+.modal-header{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-body{padding:20px;}
+.theme-toggle{width:36px;height:20px;border-radius:10px;background:var(--border2);border:none;position:relative;cursor:pointer;transition:background 0.3s;flex-shrink:0;}
+.theme-toggle::after{content:"";position:absolute;top:3px;width:14px;height:14px;border-radius:50%;background:#00C896;transition:left 0.3s;}
+body.dark .theme-toggle::after{left:3px;}
+body.light .theme-toggle::after{left:19px;}
+.stage-stepper{display:flex;gap:4px;overflow-x:auto;padding-bottom:4px;}
+.stage-pill{flex-shrink:0;display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid transparent;white-space:nowrap;transition:all 0.15s;font-family:inherit;}
+.stage-pill .sp-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.tk-detail-grid{display:grid;grid-template-columns:300px 1fr 320px;gap:16px;align-items:start;}
+@media(max-width:1280px){.tk-detail-grid{grid-template-columns:1fr;}}
+.tl-item{display:flex;gap:12px;padding-bottom:18px;position:relative;}
+.tl-item:not(:last-child)::before{content:"";position:absolute;left:13px;top:28px;bottom:0;width:2px;background:var(--border);}
+.tl-item.done:not(:last-child)::before{background:#10B981;}
+.tl-dot{width:27px;height:27px;border-radius:50%;background:var(--bg3);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;z-index:1;}
+.tl-item.done .tl-dot{background:#10B981;border-color:#10B981;color:#fff;}
+.tl-label{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.tl-time{font-size:11px;color:var(--text4);font-family:'IBM Plex Mono',monospace;}
+.cal-toggle{display:inline-flex;background:var(--bg3);border-radius:8px;padding:3px;gap:2px;}
+.cal-toggle button{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;border:none;background:transparent;color:var(--text3);font-family:inherit;cursor:pointer;}
+.cal-toggle button.active{background:var(--card);color:#00C896;}
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;}
+.week-day{background:var(--card);border:1px solid var(--border);border-radius:10px;min-height:220px;display:flex;flex-direction:column;}
+.week-day.today{border-color:#00C896;}
+.week-day.dragover{border-color:#0EA5E9;background:rgba(14,165,233,0.05);}
+.week-day-head{padding:9px 10px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text2);}
+.week-day-head .wd-date{font-size:9px;color:var(--text4);font-weight:500;}
+.week-day-body{flex:1;padding:6px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;}
+.job-card{background:var(--bg3);border:1px solid var(--border2);border-left:3px solid #8B5CF6;border-radius:7px;padding:7px 9px;cursor:grab;font-size:11px;}
+.job-card:active{cursor:grabbing;}
+.job-card .jc-ref{font-family:'IBM Plex Mono',monospace;color:#00C896;font-size:10px;}
+.job-card .jc-name{font-weight:700;color:var(--text);font-size:12px;margin:2px 0;}
+.job-card .jc-team{font-size:10px;color:var(--text3);}
+.month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+.month-cell{background:var(--card);border:1px solid var(--border);border-radius:8px;min-height:70px;padding:6px;cursor:pointer;font-size:11px;}
+.month-cell.today{border-color:#00C896;}
+.month-cell.other{opacity:0.35;}
+.month-cell:hover{border-color:var(--border2);}
+.month-cell .mc-num{font-weight:700;color:var(--text2);font-size:11px;}
+.month-cell .mc-count{margin-top:4px;display:inline-block;background:rgba(139,92,246,0.15);color:#8B5CF6;border-radius:10px;padding:1px 6px;font-size:9px;font-weight:700;}
+.star-row{display:flex;gap:6px;}
+.star-btn{width:38px;height:38px;border-radius:8px;border:2px solid var(--border);background:var(--bg);color:var(--text4);font-size:17px;cursor:pointer;font-family:inherit;transition:all 0.15s;}
+.star-btn.lit{border-color:#F59E0B;background:rgba(245,158,11,0.15);color:#F59E0B;}
+.line-tbl{width:100%;border-collapse:collapse;margin-bottom:10px;}
+.line-tbl th{font-size:10px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:0.06em;padding:7px 8px;text-align:left;border-bottom:1px solid var(--border);}
+.line-tbl td{padding:6px 8px;border-bottom:1px solid var(--border);}
+.line-tbl input{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;width:100%;}
+.totals-box{margin-left:auto;width:260px;}
+.totals-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:var(--text2);}
+.totals-row.grand{border-top:1px solid var(--border);margin-top:4px;padding-top:10px;font-size:16px;font-weight:800;color:var(--text);}
+.job-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--card);}
+@media print{body *{visibility:hidden;}#print-area,#print-area *{visibility:visible;}#print-area{position:fixed;left:0;top:0;width:100%;background:#fff;color:#000;padding:20px;}}
+@media(max-width:900px){.sidebar{display:none;}.stats-row{grid-template-columns:repeat(3,1fr);}.week-grid{grid-template-columns:1fr;}.month-grid{grid-template-columns:repeat(7,minmax(34px,1fr));}}
+@media(max-width:600px){.form-grid,.form-grid.cols3,.form-grid.cols4{grid-template-columns:1fr;}.stats-row{grid-template-columns:repeat(2,1fr);}}
+</style>
+</head>
+<body class="dark">
+<div id="root"></div>
+
+<script>
+const firebaseConfig={
+  apiKey:"AIzaSyBpoDnbWKvWQdvcZnhUZwFr24iox2fWJto",
+  authDomain:"test-bot-49f99.firebaseapp.com",
+  projectId:"test-bot-49f99",
+  storageBucket:"test-bot-49f99.firebasestorage.app",
+  messagingSenderId:"522231357803",
+  appId:"1:522231357803:web:bf65a73d1df7269615ac2e",
+  databaseURL:"https://test-bot-49f99-default-rtdb.firebaseio.com"
+};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.firestore();
+</script>
+
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback,useMemo}=React;
+
+const DEFAULT_CFG={
+  bizName:"MG Facility & Cleaning",
+  shortName:"MGFC-OC",
+  tagline:"From Lead to Payment. Managing Every Cleaning Job.",
+  wa:"27726650565",
+  email:"info@mbulahenigroup.co.za",
+  adminPw:"MGFC2026",
+  vatRate:15,
+  googleReview:"https://g.page/r/CUSUmJkZZNmSEBM/review",
+  zoho:"https://books.zohosecure.com/portal/mbulahenigroup/signin",
+  teams:["Team Alpha","Team Bravo","Team Charlie"],
+};
+const AC="#00C896",AC2="#0EA5E9";
+
+const SERVICES=[
+  {id:"deep", label:"Deep Cleaning", icon:"🧽"},
+  {id:"recurring", label:"Regular / Recurring Cleaning", icon:"🔁"},
+  {id:"postbuild", label:"Post-Construction Cleaning", icon:"🏗️"},
+  {id:"carpet", label:"Carpet & Upholstery Cleaning", icon:"🧶"},
+  {id:"window", label:"Window Cleaning", icon:"🪟"},
+  {id:"office", label:"Office Cleaning Contract", icon:"🏢"},
+  {id:"movein", label:"Move In / Move Out Cleaning", icon:"📦"},
+  {id:"sanitize", label:"Sanitization & Disinfection", icon:"🦠"},
+  {id:"other", label:"Other", icon:"✨"},
+];
+const PROPERTY_TYPES=["Residential – House","Residential – Apartment / Flat","Office","Retail Store","Warehouse / Industrial","Restaurant / Hospitality","Construction Site (Post-Build)","Other"];
+const PRIORITIES=["Low","Normal","High","Urgent"];
+
+const STAGES=[
+  {k:"new-request", l:"New Request", c:"#3B82F6"},
+  {k:"qualification", l:"Qualification", c:"#6366F1"},
+  {k:"site-inspection", l:"Site Inspection", c:"#F97316"},
+  {k:"quotation", l:"Quotation", c:"#EAB308"},
+  {k:"awaiting-approval", l:"Awaiting Approval", c:"#F59E0B"},
+  {k:"scheduled", l:"Scheduled", c:"#8B5CF6"},
+  {k:"assigned", l:"Assigned", c:"#0EA5E9"},
+  {k:"in-progress", l:"In Progress", c:"#06B6D4"},
+  {k:"completed", l:"Completed", c:"#10B981"},
+  {k:"invoiced", l:"Invoiced", c:"#0D9488"},
+  {k:"paid", l:"Paid", c:"#22C55E"},
+  {k:"closed", l:"Closed", c:"#6B7280"},
+  {k:"cancelled", l:"Cancelled", c:"#EF4444"},
+];
+const ST={}; STAGES.forEach(s=>ST[s.k]={l:s.l,c:s.c});
+
+const NOTIFY_STAGES=["quotation","awaiting-approval","scheduled","in-progress","completed","invoiced","paid"];
+const QUOTE_LINE_TYPES=["Labour","Equipment","Materials","Travel"];
+
+const INV_STATUSES=[
+  {k:"draft", l:"Draft", c:"#6B7280"},
+  {k:"sent", l:"Sent", c:"#0EA5E9"},
+  {k:"partial", l:"Partially Paid", c:"#F59E0B"},
+  {k:"paid", l:"Paid", c:"#22C55E"},
+  {k:"overdue", l:"Overdue", c:"#EF4444"},
+];
+const IST={}; INV_STATUSES.forEach(s=>IST[s.k]={l:s.l,c:s.c});
+
+const QUOTE_STATUSES=[
+  {k:"draft", l:"Draft", c:"#6B7280"},
+  {k:"sent", l:"Sent", c:"#0EA5E9"},
+  {k:"approved", l:"Approved", c:"#22C55E"},
+  {k:"declined", l:"Declined", c:"#EF4444"},
+];
+const QST={}; QUOTE_STATUSES.forEach(s=>QST[s.k]={l:s.l,c:s.c});
+
+const STAFF_ROLES=["Inspector","Cleaner","Supervisor","Office Admin"];
+
+const CLEANING_CHECKLIST=[
+  "All floors cleaned and swept",
+  "All surfaces dusted and wiped",
+  "Windows cleaned",
+  "Kitchen cleaned and sanitized",
+  "Bathrooms cleaned and sanitized",
+  "Trash removed",
+  "Furniture arranged",
+  "Appliances cleaned",
+  "Carpets vacuumed",
+  "Final walk-through completed",
+];
+
+const INSPECTION_ITEMS=[
+  "Property access available",
+  "Water/electricity available",
+  "Area ready for cleaning",
+  "All rooms accessible",
+  "No hazardous materials",
+  "Parking available for team",
+  "Client contact available",
+  "Special requirements noted",
+];
+
+function ts(){return new Date().toISOString();}
+function col(name){return db.collection("mgfc_"+name);}
+
+async function nextNumber(type){
+  const year=new Date().getFullYear();
+  const key=`${type}_${year}`;
+  const ref=col("meta").doc("counters");
+  const snap=await ref.get();
+  const data=snap.exists?snap.data():{};
+  const n=(data[key]||0)+1;
+  await ref.set({...data,[key]:n},{merge:true});
+  return {n,year};
+}
+function pad5(n){return String(n).padStart(5,"0");}
+function makeTicketRef(year,n){return `MGFC-${year}-${pad5(n)}`;}
+function makeQuoteRef(year,n){return `MGQ-${year}-${pad5(n)}`;}
+function makeInvoiceRef(year,n){return `INV-${year}-${pad5(n)}`;}
+
+async function fsUpdate(collection,id,changes){
+  await col(collection).doc(id).update({...changes,updatedAt:ts()});
+}
+async function addNoteToTicket(ref,txt,type="note",author=""){
+  const s=await col("tickets").doc(ref).get();
+  const notes=[...((s.data()||{}).notes||[]),{txt,at:ts(),type,author}];
+  await col("tickets").doc(ref).update({notes,updatedAt:ts()});
+}
+async function addJobNote(jobId,ticketRef,txt,type="note",author=""){
+  await col("job_notes").add({jobId,ticketRef,txt,type,author,at:ts()});
+}
+async function logWA(ticketRef,template,phone,message,sentBy){
+  await col("whatsapp_logs").add({ticketRef,template,phone,message,sentAt:ts(),sentBy});
+}
+
+async function upsertCustomer(form){
+  const phone=String(form.phone||"").replace(/[^0-9]/g,"");
+  if(!phone) return null;
+  const snap=await col("customers").where("phoneClean","==",phone).limit(1).get();
+  const payload={
+    name:form.clientName||form.name||"",
+    phone:form.phone||"",
+    phoneClean:phone,
+    email:form.email||"",
+    company:form.company||"",
+    address:form.address||"",
+    propertyType:form.propertyType||"",
+    updatedAt:ts(),
+  };
+  if(!snap.empty){
+    const id=snap.docs[0].id;
+    await col("customers").doc(id).update(payload);
+    return id;
+  }
+  const ref=await col("customers").add({...payload,createdAt:ts()});
+  return ref.id;
+}
+
+function resizeImage(file,maxDim=1280,quality=0.72){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const img=new Image();
+      img.onload=()=>{
+        let{width,height}=img;
+        if(width>height&&width>maxDim){height=Math.round(height*maxDim/width);width=maxDim;}
+        else if(height>maxDim){width=Math.round(width*maxDim/height);height=maxDim;}
+        const canvas=document.createElement("canvas");
+        canvas.width=width;canvas.height=height;
+        canvas.getContext("2d").drawImage(img,0,0,width,height);
+        resolve(canvas.toDataURL("image/jpeg",quality));
+      };
+      img.onerror=reject;
+      img.src=reader.result;
+    };
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function waUrl(phone,msg){
+  const clean=String(phone||"").replace(/[^0-9]/g,"");
+  const num=clean.startsWith("0")?"27"+clean.slice(1):clean;
+  return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+}
+
+function buildWaMsg(template,t,cfg,extra={}){
+  const name=t.clientName||t.name||"there";
+  const svc=SERVICES.find(s=>s.id===t.serviceType)?.label||t.serviceType||"—";
+  if(template==="quoteReady"){
+    return `Hello ${name} 👋
+
+Great news — your quotation is ready! 📝
+
+📋 *Ticket:* ${t.ref}
+🧹 *Service:* ${svc}
+💰 *Quote Ref:* ${extra.quoteRef||"—"}
+💵 *Total:* R ${extra.total||"—"}
+
+Please reply to this message to confirm and we'll get your job scheduled right away.
+
+_${cfg.bizName} — ${cfg.tagline}_`;
+  }
+  if(template==="inspection"){
+    return `Hello ${name} 👋
+
+We'd like to book a site inspection for your cleaning request.
+
+📋 *Ticket:* ${t.ref}
+🧹 *Service:* ${svc}
+📍 *Property:* ${t.address||"—"}
+📅 *Proposed Date:* ${extra.date||"To be confirmed"}
+
+Please reply with a date/time that works for you and our inspector will confirm.
+
+_${cfg.bizName} — ${cfg.tagline}_`;
+  }
+  if(template==="reminder"){
+    return `Hello ${name} 👋
+
+Friendly reminder of your upcoming cleaning appointment.
+
+📋 *Ticket:* ${t.ref}
+🧹 *Service:* ${svc}
+📅 *Date:* ${extra.date||"—"}
+🕒 *Time:* ${extra.time||"—"}
+👷 *Team:* ${extra.team||"—"}
+
+Please ensure access to the property is available at this time.
+
+_${cfg.bizName} — ${cfg.tagline}_`;
+  }
+  if(template==="invoiceDue"){
+    return `Hello ${name} 👋
+
+This is a reminder that invoice *${extra.invoiceRef||""}* for *R ${extra.total||"—"}* is ${extra.overdue?"now overdue":"due"}.
+
+📋 *Ticket:* ${t.ref}
+🧾 *Invoice:* ${extra.invoiceRef||"—"}
+📅 *Due Date:* ${extra.dueDate||"—"}
+
+Kindly arrange payment at your earliest convenience. Let us know if you have any questions.
+
+_${cfg.bizName} — ${cfg.tagline}_`;
+  }
+  return extra.custom||"";
+}
+
+function openPrintWindow(html){
+  const w=window.open("","_blank");
+  w.document.write(html);
+  w.document.close();
+  setTimeout(()=>{try{w.focus();w.print();}catch(e){}},300);
+}
+function pdfShell(cfg,refBadge,badgeLabel,bodyHtml){
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;font-size:12px;color:#111;background:#fff;padding:24px;}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:3px solid #00C896;}
+.brand{font-size:20px;font-weight:900;color:#050810;}
+.brand-sub{font-size:11px;color:#666;margin-top:2px;}
+.ref-badge{background:#00C896;color:#050810;font-weight:800;font-size:17px;padding:8px 16px;border-radius:8px;font-family:monospace;}
+h2{font-size:13px;font-weight:700;color:#333;margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid #ddd;text-transform:uppercase;letter-spacing:0.05em;}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin-bottom:10px;}
+.row{padding:5px 0;border-bottom:1px solid #f0f0f0;}
+.key{font-size:10px;color:#666;font-weight:700;text-transform:uppercase;margin-bottom:1px;}
+.val{font-size:12px;color:#111;}
+table.items{width:100%;border-collapse:collapse;margin-bottom:10px;}
+table.items th{background:#f0f0f0;font-size:10px;font-weight:700;text-transform:uppercase;padding:6px 8px;border:1px solid #ddd;text-align:left;}
+table.items td{padding:6px 8px;border:1px solid #ddd;font-size:11px;}
+.totals{margin-left:auto;width:240px;margin-top:6px;}
+.totals .trow{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;}
+.totals .grand{border-top:2px solid #333;margin-top:4px;padding-top:8px;font-weight:800;font-size:15px;}
+.footer{margin-top:24px;padding-top:10px;border-top:1px solid #ddd;font-size:10px;color:#999;text-align:center;}
+@media print{body{padding:10px;}button{display:none!important;}}
+</style></head><body>
+<div class="header">
+  <div><div class="brand">🧹 ${cfg.bizName}</div><div class="brand-sub">${cfg.tagline} · ${cfg.email}</div></div>
+  <div style="text-align:right"><div class="ref-badge">${refBadge}</div><div style="font-size:10px;color:#666;margin-top:4px;">${badgeLabel}</div></div>
+</div>
+${bodyHtml}
+<div class="footer">${cfg.bizName} · ${cfg.email} · Generated ${new Date().toLocaleString("en-ZA")}</div>
+</body></html>`;
+}
+
+function buildQuotePdfHtml(quote,cfg){
+  const rows=(quote.lineItems||[]).map(li=>`<tr><td>${li.type}</td><td>${li.desc||""}</td><td>${li.qty}</td><td>R ${Number(li.unitCost||0).toFixed(2)}</td><td>R ${(li.qty*li.unitCost||0).toFixed(2)}</td></tr>`).join("")||`<tr><td colspan="5" style="text-align:center;color:#999">No line items</td></tr>`;
+  const body=`
+<h2>Customer</h2>
+<div class="grid">
+  <div class="row"><div class="key">Name</div><div class="val">${quote.clientName||"—"}</div></div>
+  <div class="row"><div class="key">Phone</div><div class="val">${quote.phone||"—"}</div></div>
+  <div class="row"><div class="key">Address</div><div class="val">${quote.address||"—"}</div></div>
+  <div class="row"><div class="key">Linked Ticket</div><div class="val">${quote.ticketRef||"—"}</div></div>
+</div>
+<h2>Quotation Items</h2>
+<table class="items"><tr><th>Category</th><th>Description</th><th>Qty</th><th>Unit Cost</th><th>Total</th></tr>${rows}</table>
+<div class="totals">
+  <div class="trow"><span>Subtotal</span><span>R ${Number(quote.subtotal||0).toFixed(2)}</span></div>
+  <div class="trow"><span>VAT (${cfg.vatRate}%)</span><span>R ${Number(quote.vat||0).toFixed(2)}</span></div>
+  <div class="trow grand"><span>Total</span><span>R ${Number(quote.total||0).toFixed(2)}</span></div>
+</div>
+<h2>Validity</h2>
+<div class="row"><div class="val">This quotation is valid for 14 days from date of issue. Prices are quoted in South African Rand and include VAT where indicated.</div></div>`;
+  return pdfShell(cfg,quote.id,"QUOTATION",body);
+}
+
+function buildInvoicePdfHtml(invoice,cfg){
+  const rows=(invoice.lineItems||[]).map(li=>`<tr><td>${li.type}</td><td>${li.desc||""}</td><td>${li.qty}</td><td>R ${Number(li.unitCost||0).toFixed(2)}</td><td>R ${(li.qty*li.unitCost||0).toFixed(2)}</td></tr>`).join("")||`<tr><td colspan="5" style="text-align:center;color:#999">No line items</td></tr>`;
+  const body=`
+<h2>Bill To</h2>
+<div class="grid">
+  <div class="row"><div class="key">Name</div><div class="val">${invoice.clientName||"—"}</div></div>
+  <div class="row"><div class="key">Phone</div><div class="val">${invoice.phone||"—"}</div></div>
+  <div class="row"><div class="key">Address</div><div class="val">${invoice.address||"—"}</div></div>
+  <div class="row"><div class="key">Linked Ticket</div><div class="val">${invoice.ticketRef||"—"}</div></div>
+  <div class="row"><div class="key">Date Issued</div><div class="val">${invoice.createdAt?new Date(invoice.createdAt).toLocaleDateString("en-ZA"):"—"}</div></div>
+  <div class="row"><div class="key">Due Date</div><div class="val">${invoice.dueDate||"—"}</div></div>
+</div>
+<h2>Invoice Items</h2>
+<table class="items"><tr><th>Category</th><th>Description</th><th>Qty</th><th>Unit Cost</th><th>Total</th></tr>${rows}</table>
+<div class="totals">
+  <div class="trow"><span>Subtotal</span><span>R ${Number(invoice.subtotal||0).toFixed(2)}</span></div>
+  <div class="trow"><span>VAT (${cfg.vatRate}%)</span><span>R ${Number(invoice.vat||0).toFixed(2)}</span></div>
+  <div class="trow grand"><span>Total Due</span><span>R ${Number(invoice.total||0).toFixed(2)}</span></div>
+  ${invoice.amountPaid?`<div class="trow"><span>Amount Paid</span><span>R ${Number(invoice.amountPaid||0).toFixed(2)}</span></div><div class="trow grand"><span>Balance</span><span>R ${(Number(invoice.total||0)-Number(invoice.amountPaid||0)).toFixed(2)}</span></div>`:""}
+</div>
+<h2>Payment Status</h2>
+<div class="row"><div class="val">${IST[invoice.status]?.l||invoice.status}</div></div>`;
+  return pdfShell(cfg,invoice.id,"INVOICE",body);
+}
+
+function buildTicketPdfHtml(ticket, cfg){
+  const notes = (ticket.notes||[]).map(n => `<div style="padding:4px 0;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="font-weight:600;">${n.type||"note"}</span> ${n.txt} <span style="color:#999;font-size:10px;">${n.at?new Date(n.at).toLocaleString("en-ZA"):""}</span></div>`).join("");
+  const body=`
+<h2>Ticket Details</h2>
+<div class="grid">
+  <div class="row"><div class="key">Ref</div><div class="val">${ticket.ref}</div></div>
+  <div class="row"><div class="key">Status</div><div class="val">${ST[ticket.status]?.l||ticket.status}</div></div>
+  <div class="row"><div class="key">Client</div><div class="val">${ticket.clientName||"—"}</div></div>
+  <div class="row"><div class="key">Phone</div><div class="val">${ticket.phone||"—"}</div></div>
+  <div class="row"><div class="key">Email</div><div class="val">${ticket.email||"—"}</div></div>
+  <div class="row"><div class="key">Address</div><div class="val">${ticket.address||"—"}</div></div>
+  <div class="row"><div class="key">Service</div><div class="val">${SERVICES.find(s=>s.id===ticket.serviceType)?.label||ticket.serviceType||"—"}</div></div>
+  <div class="row"><div class="key">Priority</div><div class="val">${ticket.priority||"Normal"}</div></div>
+  <div class="row"><div class="key">Created</div><div class="val">${ticket.createdAt?new Date(ticket.createdAt).toLocaleString("en-ZA"):"—"}</div></div>
+</div>
+<h2>Timeline & Notes</h2>
+<div style="max-height:300px;overflow-y:auto;border:1px solid #ddd;border-radius:6px;padding:8px;">
+${notes||"<div style='color:#999;text-align:center;padding:16px;'>No notes</div>"}
+</div>
+<h2>Checklist & Sign-off</h2>
+<div class="grid">
+  <div class="row"><div class="val">Checklist: ${ticket.checklistItems ? Object.values(ticket.checklistItems).filter(Boolean).length : 0} / ${CLEANING_CHECKLIST.length} completed</div></div>
+  <div class="row"><div class="val">Client Rating: ${ticket.rating ? "★".repeat(ticket.rating) : "Not rated"}</div></div>
+  <div class="row"><div class="val">Feedback: ${ticket.feedback || "—"}</div></div>
+</div>
+<div style="margin-top:12px;padding:8px;border:1px solid #00C896;border-radius:6px;background:#f0faf8;text-align:center;font-weight:600;color:#00C896;">
+${ticket.status==="closed"||ticket.status==="completed"?"✅ Job Completed & Signed Off":"⏳ Job in Progress"}
+</div>`;
+  return pdfShell(cfg,ticket.ref,"TICKET COMPLETION CERTIFICATE",body);
+}
+
+/* ── UI ATOMS ── */
+function Lbl({c,req}){return<div className="field-label">{c}{req&&<span style={{color:"#F87171",marginLeft:3}}>*</span>}</div>;}
+function Field({l,e,span,children}){return<div className={`form-field${span?" span2":""}`}><Lbl c={l}/>{children}{e&&<div className="field-error">{e}</div>}</div>;}
+
+function StagePill({s}){
+  const st=ST[s]||{l:s,c:"var(--text3)"};
+  const isCancelled = s === "cancelled";
+  const isClosed = s === "closed";
+  const isPending = s === "awaiting-approval";
+  return(
+    <span className="badge" style={{
+      background:isCancelled?"rgba(239,68,68,0.15)":isClosed?"rgba(107,114,128,0.15)":isPending?"rgba(245,158,11,0.15)":st.c+"18",
+      color:isCancelled?"#EF4444":isClosed?"#6B7280":isPending?"#F59E0B":st.c,
+      border:`1px solid ${isCancelled?"rgba(239,68,68,0.3)":isClosed?"rgba(107,114,128,0.3)":isPending?"rgba(245,158,11,0.3)":st.c+"40"}`
+    }}>
+      {isCancelled?"🚫 ":isClosed?"✅ ":isPending?"⏳ ":""}{st.l}
+    </span>
+  );
+}
+
+function InvStatusPill({s}){
+  const st=IST[s]||{l:s,c:"var(--text3)"};
+  return<span className="badge" style={{background:st.c+"18",color:st.c,border:`1px solid ${st.c}40`}}>{st.l}</span>;
+}
+function QuoteStatusPill({s}){
+  const st=QST[s]||{l:s,c:"var(--text3)"};
+  return<span className="badge" style={{background:st.c+"18",color:st.c,border:`1px solid ${st.c}40`}}>{st.l}</span>;
+}
+function Spinner(){return<div className="spinner-wrap"><div className="spinner"/><p style={{color:"var(--text3)",fontSize:14}}>Connecting to Firebase…</p></div>;}
+function Toast({msg,type}){if(!msg)return null;return<div className={`toast ${type||"ok"}`}>{msg}</div>;}
+
+function Modal({title,onClose,wide,children}){
+  return(
+    <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div className={`modal-box fu${wide?" wide":""}`}>
+        <div className="modal-header">
+          <div className="card-title">{title}</div>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function StarRating({value,onChange}){
+  return(
+    <div className="star-row">
+      {[1,2,3,4,5].map(n=>(
+        <button key={n} type="button" className={`star-btn${value>=n?" lit":""}`} onClick={()=>onChange(n)}>★</button>
+      ))}
+    </div>
+  );
+}
+
+function SignaturePad({padId="sig-pad",clearId="sig-clear"}){
+  useEffect(()=>{
+    const canvas=document.getElementById(padId);
+    if(!canvas) return;
+    const ctx=canvas.getContext("2d");
+    let drawing=false;
+    const getXY=(e)=>{const rect=canvas.getBoundingClientRect();const src=e.touches?e.touches[0]:e;return[src.clientX-rect.left,src.clientY-rect.top];};
+    const start=(e)=>{e.preventDefault();drawing=true;const[x,y]=getXY(e);ctx.beginPath();ctx.moveTo(x,y);};
+    const move=(e)=>{e.preventDefault();if(!drawing)return;const[x,y]=getXY(e);ctx.lineWidth=2;ctx.lineCap="round";ctx.strokeStyle="#00C896";ctx.lineTo(x,y);ctx.stroke();};
+    const stop=()=>{drawing=false;};
+    canvas.addEventListener("mousedown",start);
+    canvas.addEventListener("mousemove",move);
+    canvas.addEventListener("mouseup",stop);
+    canvas.addEventListener("touchstart",start,{passive:false});
+    canvas.addEventListener("touchmove",move,{passive:false});
+    canvas.addEventListener("touchend",stop);
+    const clearBtn=document.getElementById(clearId);
+    const clearFn=()=>ctx.clearRect(0,0,canvas.width,canvas.height);
+    if(clearBtn) clearBtn.addEventListener("click",clearFn);
+    return()=>{
+      canvas.removeEventListener("mousedown",start);
+      canvas.removeEventListener("mousemove",move);
+      canvas.removeEventListener("mouseup",stop);
+      canvas.removeEventListener("touchstart",start);
+      canvas.removeEventListener("touchmove",move);
+      canvas.removeEventListener("touchend",stop);
+      if(clearBtn) clearBtn.removeEventListener("click",clearFn);
+    };
+  },[]);
+  return(
+    <div>
+      <canvas id={padId} width="600" height="160" style={{width:"100%",border:"1px solid var(--border2)",borderRadius:10,background:"#fff",display:"block",touchAction:"none"}}/>
+      <button id={clearId} type="button" className="btn btn-secondary btn-sm" style={{marginTop:8}}>🗑 Clear Signature</button>
+    </div>
+  );
+}
+
+function PhotoUploader({photos,setPhotos,max=8}){
+  const fRef=useRef();
+  const add=async(files)=>{
+    const arr=Array.from(files).slice(0,max-photos.length);
+    for(const f of arr){
+      try{const dataUrl=await resizeImage(f);setPhotos(p=>[...p,{dataUrl,name:f.name}]);}catch(e){console.error(e);}
+    }
+  };
+  return(
+    <div className="photo-drop" onClick={()=>fRef.current.click()}
+      onDragOver={e=>{e.preventDefault();e.currentTarget.classList.add("over");}}
+      onDragLeave={e=>e.currentTarget.classList.remove("over")}
+      onDrop={e=>{e.preventDefault();e.currentTarget.classList.remove("over");add(e.dataTransfer.files);}}>
+      <input type="file" ref={fRef} accept="image/*" multiple onChange={e=>add(e.target.files)}/>
+      {photos.length===0?<span style={{fontSize:12,color:"var(--text4)"}}>Drag &amp; drop or click to upload photos</span>:(
+        <div className="photo-grid">
+          {photos.map((p,i)=>(
+            <div key={i} className="photo-thumb">
+              <img src={p.dataUrl} alt={p.name}/>
+              <button className="photo-rm" onClick={e=>{e.stopPropagation();setPhotos(ps=>ps.filter((_,j)=>j!==i));}}>✕</button>
+            </div>
+          ))}
+          {photos.length<max&&<div style={{width:72,height:72,border:"1px dashed var(--border2)",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,color:"var(--text4)"}}>+</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── LOGIN ── */
+function Login({cfg,onAuth}){
+  const [pw,setPw]=useState("");
+  const [err,setErr]=useState("");
+  const tryLogin=()=>{if(pw===cfg.adminPw)onAuth();else setErr("Incorrect password");};
+  return(
+    <div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div className="card fu" style={{maxWidth:360,width:"100%",padding:32}}>
+        <div style={{width:44,height:44,borderRadius:11,background:`linear-gradient(135deg,${AC},${AC2})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,marginBottom:16}}>🧹</div>
+        <div style={{fontSize:20,fontWeight:700,color:"var(--text)",marginBottom:4}}>{cfg.shortName}</div>
+        <div style={{fontSize:13,color:"var(--text3)",marginBottom:20}}>{cfg.bizName} · sign in to manage operations</div>
+        <Lbl c="Password"/>
+        <input className="field-input" type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&tryLogin()} placeholder="Enter password" autoFocus style={{marginBottom:8,marginTop:4}}/>
+        {err&&<div style={{color:"#F87171",fontSize:12,marginBottom:8}}>{err}</div>}
+        <button className="btn btn-primary btn-block" style={{marginTop:8}} onClick={tryLogin}>Login →</button>
+        <div style={{fontSize:11,color:"var(--text4)",marginTop:14,textAlign:"center"}}>Shared Firebase architecture with Cyber I.T Masters Support Desk</div>
+      </div>
+    </div>
+  );
+}
+
+/* ── SIDEBAR ── */
+const NAV_ITEMS=[
+  {k:"dashboard", l:"Dashboard", i:"📊"},
+  {k:"tickets", l:"Cleaning Tickets", i:"🎫"},
+  {k:"customers", l:"Customers", i:"👥"},
+  {k:"quotations", l:"Quotations", i:"📝"},
+  {k:"scheduling", l:"Scheduling", i:"📅"},
+  {k:"jobs", l:"Active Jobs", i:"🚚"},
+  {k:"staff", l:"Staff Management", i:"👷"},
+  {k:"whatsapp", l:"WhatsApp Center", i:"💬"},
+  {k:"inspections", l:"Site Inspections", i:"📸"},
+  {k:"signoffs", l:"Client Sign-Offs", i:"✅"},
+  {k:"invoices", l:"Invoices", i:"💰"},
+  {k:"reports", l:"Reports", i:"📈"},
+  {k:"mobile", l:"Team Portal", i:"📱"},
+  {k:"settings", l:"Settings", i:"⚙"},
+];
+
+function Sidebar({page,setPage,cfg,counts,theme,toggleTheme}){
+  return(
+    <div className="sidebar">
+      <div className="sidebar-logo">
+        <div className="brand">
+          <div className="icon">🧹</div>
+          <div>
+            <div className="name">MG Facility &amp; Cleaning</div>
+            <div className="sub">{cfg.shortName}</div>
+          </div>
+        </div>
+      </div>
+      <div className="sidebar-nav">
+        <div className="nav-section">
+          {NAV_ITEMS.map(n=>(
+            <button key={n.k} className={`nav-item${page===n.k?" active":""}`} onClick={()=>setPage(n.k)}>
+              <span className="ni">{n.i}</span>{n.l}
+              {n.k==="tickets"&&counts.pendingApproval>0&&<span className="badge">{counts.pendingApproval}</span>}
+              {n.k==="jobs"&&counts.activeJobs>0&&<span style={{marginLeft:"auto",fontFamily:"'IBM Plex Mono',monospace",fontSize:11,color:"var(--text3)"}}>{counts.activeJobs}</span>}
+              {n.k==="invoices"&&counts.overdueInvoices>0&&<span className="badge">{counts.overdueInvoices}</span>}
+            </button>
+          ))}
+        </div>
+        <div className="nav-section">
+          <div className="nav-label">Appearance</div>
+          <div className="nav-item" style={{justifyContent:"space-between"}}>
+            <span style={{display:"flex",alignItems:"center",gap:8}}><span className="ni">{theme==="dark"?"🌙":"☀️"}</span>{theme==="dark"?"Dark Mode":"Light Mode"}</span>
+            <button className="theme-toggle" onClick={toggleTheme}/>
+          </div>
+        </div>
+      </div>
+      <div className="sidebar-bottom">
+        <div className="status-pill">
+          <div className="status-dot"/>
+          <span className="status-text">Live · Firebase</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TopBar({title,sub,right}){
+  return(
+    <div className="topbar">
+      <div className="topbar-left">
+        <div className="topbar-title">{title}</div>
+        <div className="topbar-sub">{sub}</div>
+      </div>
+      <div className="topbar-right">{right}</div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   DASHBOARD
+════════════════════════════════════════════════════ */
+function startOfMonth(){const d=new Date();d.setDate(1);d.setHours(0,0,0,0);return d.getTime();}
+
+function Dashboard({tickets,quotes,jobs,invoices,cfg,setPage,setSel}){
+  const newRequests=tickets.filter(t=>t.status==="new-request").length;
+  const pendingApproval=tickets.filter(t=>t.status==="awaiting-approval").length;
+  const activeJobs=jobs.filter(j=>j.status==="in-progress"||j.status==="scheduled").length;
+  const completedTickets=tickets.filter(t=>t.status==="completed"||t.status==="closed").length;
+  const invoicesDue=invoices.filter(i=>i.status!=="paid").length;
+  const som=startOfMonth();
+  const revenueThisMonth=invoices.reduce((sum,inv)=>{
+    const pays=(inv.payments||[]).filter(p=>new Date(p.at).getTime()>=som);
+    return sum+pays.reduce((a,p)=>a+Number(p.amount||0),0);
+  },0);
+
+  const cards=[
+    {l:"New Requests", v:newRequests, c:"#3B82F6", page:"tickets"},
+    {l:"Pending Approval", v:pendingApproval, c:"#F59E0B", page:"tickets"},
+    {l:"Active Jobs", v:activeJobs, c:"#8B5CF6", page:"jobs"},
+    {l:"Completed", v:completedTickets, c:"#10B981", page:"tickets"},
+    {l:"Invoices Due", v:invoicesDue, c:"#F59E0B", page:"invoices"},
+    {l:"Revenue This Month", v:`R ${revenueThisMonth.toLocaleString("en-ZA",{maximumFractionDigits:0})}`, c:"#22C55E", page:"reports"},
+  ];
+
+  const recent=[...tickets].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,8);
+  const todaysJobs=jobs.filter(j=>j.scheduledDate===new Date().toISOString().slice(0,10));
+
+  return(
+    <div className="page-content">
+      <div className="stats-row">
+        {cards.map((c,i)=>(
+          <div key={i} className="stat-card" style={{cursor:"pointer"}} onClick={()=>setPage(c.page)}>
+            <div className="stat-val" style={{color:c.c,fontSize:typeof c.v==="string"?16:22}}>{c.v}</div>
+            <div className="stat-lbl"><span className="stat-dot" style={{background:c.c}}/>{c.l}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1.4fr 1fr",gap:16}}>
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title">Recent Tickets</div>
+            <button className="btn btn-ghost btn-sm" onClick={()=>setPage("tickets")}>View all →</button>
+          </div>
+          <div style={{padding:"0 4px"}}>
+            {recent.length===0&&<div style={{padding:24,textAlign:"center",color:"var(--text4)",fontSize:13}}>No tickets yet.</div>}
+            {recent.length>0&&(
+              <table className="tbl">
+                <thead><tr><th>Ref</th><th>Customer</th><th>Service</th><th>Status</th></tr></thead>
+                <tbody>
+                  {recent.map(t=>(
+                    <tr key={t.ref} style={{cursor:"pointer"}} onClick={()=>{setSel(t.ref);setPage("tickets");}}>
+                      <td className="mono" style={{color:AC}}>{t.ref}</td>
+                      <td>{t.clientName||"—"}</td>
+                      <td style={{fontSize:12}}>{SERVICES.find(s=>s.id===t.serviceType)?.label||"—"}</td>
+                      <td><StagePill s={t.status}/></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title">Today's Jobs</div>
+            <button className="btn btn-ghost btn-sm" onClick={()=>setPage("jobs")}>Open →</button>
+          </div>
+          <div className="card-body">
+            {todaysJobs.length===0&&<div style={{textAlign:"center",color:"var(--text4)",fontSize:13,padding:"12px 0"}}>No jobs scheduled for today.</div>}
+            {todaysJobs.map(j=>{
+              const tk=tickets.find(t=>t.ref===j.ticketRef);
+              return(
+                <div key={j.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:"1px solid var(--border)"}}>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{tk?.clientName||j.ticketRef}</div>
+                    <div style={{fontSize:11,color:"var(--text3)"}}>{j.team||"Unassigned"} · {j.scheduledTime||""}</div>
+                  </div>
+                  <StagePill s={j.status==="in-progress"?"in-progress":j.status==="completed"?"completed":"scheduled"}/>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   TICKET MANAGEMENT ACTIONS
+════════════════════════════════════════════════════ */
+function TicketActions({ticket, onAction, showToast}){
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [showPendingConfirm, setShowPendingConfirm] = useState(false);
+  const [showApproveConfirm, setShowApproveConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleAction = async (action, status) => {
+    try {
+      await fsUpdate("tickets", ticket.ref, { status, updatedAt: ts() });
+      await addNoteToTicket(ticket.ref, `Ticket ${action}`, "stage", "Office");
+      showToast(`✅ Ticket ${action}`);
+      onAction && onAction();
+    } catch(e) {
+      showToast(`Failed to ${action} ticket`, "error");
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await col("tickets").doc(ticket.ref).delete();
+      showToast(`🗑️ Ticket ${ticket.ref} deleted`);
+      onAction && onAction();
+    } catch(e) {
+      showToast("Failed to delete ticket", "error");
+    }
+  };
+
+  if (ticket.status === "closed" || ticket.status === "cancelled") {
+    return (
+      <div style={{textAlign:"center", padding:"8px 0", color:"var(--text4)"}}>
+        This ticket is {ticket.status}
+        <button className="btn btn-danger btn-sm btn-block" style={{marginTop:8}} onClick={()=>setShowDeleteConfirm(true)}>
+          🗑️ Delete Ticket
+        </button>
+        {showDeleteConfirm && (
+          <Modal title="🗑️ Delete Ticket" onClose={()=>setShowDeleteConfirm(false)}>
+            <p style={{marginBottom:12, color:"var(--text2)"}}>Delete <strong>{ticket.ref}</strong>? This cannot be undone.</p>
+            <div style={{display:"flex", gap:8, justifyContent:"flex-end"}}>
+              <button className="btn btn-secondary" onClick={()=>setShowDeleteConfirm(false)}>Cancel</button>
+              <button className="btn btn-danger" onClick={()=>{handleDelete(); setShowDeleteConfirm(false);}}>Delete</button>
+            </div>
+          </Modal>
+        )}
+      </div>
+    );
+  }
+
+  return(
+    <div style={{display:"flex", flexDirection:"column", gap:6}}>
+      {ticket.status !== "awaiting-approval" && ticket.status !== "paid" && ticket.status !== "closed" && ticket.status !== "cancelled" && (
+        <button 
+          className="btn btn-secondary btn-sm btn-block" 
+          onClick={() => setShowPendingConfirm(true)}
+          style={{borderColor:"#F59E0B", color:"#F59E0B"}}
+        >
+          ⏳ Mark Pending Approval
+        </button>
+      )}
+
+      {ticket.status === "awaiting-approval" && (
+        <button 
+          className="btn btn-success btn-sm btn-block" 
+          onClick={() => setShowApproveConfirm(true)}
+        >
+          ✅ Approve & Proceed
+        </button>
+      )}
+
+      <button 
+        className="btn btn-danger btn-sm btn-block" 
+        onClick={() => setShowCancelConfirm(true)}
+      >
+        🚫 Cancel Ticket
+      </button>
+
+      {ticket.status === "paid" && (
+        <button 
+          className="btn btn-success btn-sm btn-block" 
+          onClick={() => setShowCloseConfirm(true)}
+        >
+          ✅ Close Ticket
+        </button>
+      )}
+
+      <button className="btn btn-danger btn-sm btn-block" onClick={()=>setShowDeleteConfirm(true)}>
+        🗑️ Delete Ticket
+      </button>
+
+      {showPendingConfirm && (
+        <Modal title="⏳ Pending Client Approval" onClose={() => setShowPendingConfirm(false)}>
+          <p style={{marginBottom:12, color:"var(--text2)"}}>Mark ticket <strong>{ticket.ref}</strong> as pending client approval?</p>
+          <div style={{display:"flex", gap:8, justifyContent:"flex-end"}}>
+            <button className="btn btn-secondary" onClick={() => setShowPendingConfirm(false)}>Cancel</button>
+            <button className="btn btn-primary" onClick={() => {handleAction("pending client approval", "awaiting-approval"); setShowPendingConfirm(false);}}>Confirm</button>
+          </div>
+        </Modal>
+      )}
+
+      {showApproveConfirm && (
+        <Modal title="✅ Approve Ticket" onClose={() => setShowApproveConfirm(false)}>
+          <p style={{marginBottom:12, color:"var(--text2)"}}>Approve ticket <strong>{ticket.ref}</strong>?</p>
+          <div style={{display:"flex", gap:8, justifyContent:"flex-end"}}>
+            <button className="btn btn-secondary" onClick={() => setShowApproveConfirm(false)}>Cancel</button>
+            <button className="btn btn-success" onClick={() => {handleAction("approved", "scheduled"); setShowApproveConfirm(false);}}>Approve</button>
+          </div>
+        </Modal>
+      )}
+
+      {showCancelConfirm && (
+        <Modal title="🚫 Cancel Ticket" onClose={() => setShowCancelConfirm(false)}>
+          <p style={{marginBottom:12, color:"var(--text2)"}}>Cancel <strong>{ticket.ref}</strong>?</p>
+          <div style={{display:"flex", gap:8, justifyContent:"flex-end"}}>
+            <button className="btn btn-secondary" onClick={() => setShowCancelConfirm(false)}>No</button>
+            <button className="btn btn-danger" onClick={() => {handleAction("cancelled", "cancelled"); setShowCancelConfirm(false);}}>Yes</button>
+          </div>
+        </Modal>
+      )}
+
+      {showCloseConfirm && (
+        <Modal title="✅ Close Ticket" onClose={() => setShowCloseConfirm(false)}>
+          <p style={{marginBottom:12, color:"var(--text2)"}}>Close ticket <strong>{ticket.ref}</strong>?</p>
+          <div style={{display:"flex", gap:8, justifyContent:"flex-end"}}>
+            <button className="btn btn-secondary" onClick={() => setShowCloseConfirm(false)}>Cancel</button>
+            <button className="btn btn-success" onClick={() => {handleAction("closed", "closed"); setShowCloseConfirm(false);}}>Close</button>
+          </div>
+        </Modal>
+      )}
+
+      {showDeleteConfirm && (
+        <Modal title="🗑️ Delete Ticket" onClose={()=>setShowDeleteConfirm(false)}>
+          <p style={{marginBottom:12, color:"var(--text2)"}}>Delete <strong>{ticket.ref}</strong>? This cannot be undone.</p>
+          <div style={{display:"flex", gap:8, justifyContent:"flex-end"}}>
+            <button className="btn btn-secondary" onClick={()=>setShowDeleteConfirm(false)}>Cancel</button>
+            <button className="btn btn-danger" onClick={()=>{handleDelete(); setShowDeleteConfirm(false);}}>Delete</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   QUOTE ACTIONS
+════════════════════════════════════════════════════ */
+function QuoteActions({quote, ticket, onAction, showToast}){
+  const [showAcceptConfirm, setShowAcceptConfirm] = useState(false);
+  const [showDeclineConfirm, setShowDeclineConfirm] = useState(false);
+
+  const handleQuoteAction = async (action, status) => {
+    try {
+      await fsUpdate("quotes", quote.id, { status, updatedAt: ts() });
+      await addNoteToTicket(ticket.ref, `Quote ${action}`, "note", "Office");
+      
+      if (status === "approved") {
+        await fsUpdate("tickets", ticket.ref, { status: "awaiting-approval", quoteApprovedAt: ts() });
+        showToast(`✅ Quote ${action} - Ticket advanced to Awaiting Approval`);
+      } else {
+        showToast(`✅ Quote ${action}`);
+      }
+      
+      onAction && onAction();
+    } catch(e) {
+      showToast(`Failed to ${action} quote`, "error");
+    }
+  };
+
+  if (!quote) return null;
+
+  const isPending = quote.status === "draft" || quote.status === "sent";
+
+  return(
+    <div style={{display:"flex", gap:6, flexWrap:"wrap"}}>
+      {isPending && (
+        <>
+          <button className="btn btn-success btn-sm" onClick={() => setShowAcceptConfirm(true)}>✅ Accept</button>
+          <button className="btn btn-danger btn-sm" onClick={() => setShowDeclineConfirm(true)}>❌ Decline</button>
+        </>
+      )}
+      
+      {quote.status === "approved" && <span className="badge" style={{background:"rgba(34,197,94,0.15)", color:"#22C55E"}}>✅ Accepted</span>}
+      {quote.status === "declined" && <span className="badge" style={{background:"rgba(239,68,68,0.15)", color:"#EF4444"}}>❌ Declined</span>}
+
+      {showAcceptConfirm && (
+        <Modal title="✅ Accept Quote" onClose={() => setShowAcceptConfirm(false)}>
+          <p style={{marginBottom:12, color:"var(--text2)"}}>Accept quote <strong>{quote.id}</strong>?</p>
+          <div style={{display:"flex", gap:8, justifyContent:"flex-end"}}>
+            <button className="btn btn-secondary" onClick={() => setShowAcceptConfirm(false)}>Cancel</button>
+            <button className="btn btn-success" onClick={() => {handleQuoteAction("accepted", "approved"); setShowAcceptConfirm(false);}}>Accept</button>
+          </div>
+        </Modal>
+      )}
+
+      {showDeclineConfirm && (
+        <Modal title="❌ Decline Quote" onClose={() => setShowDeclineConfirm(false)}>
+          <p style={{marginBottom:12, color:"var(--text2)"}}>Decline quote <strong>{quote.id}</strong>?</p>
+          <div style={{display:"flex", gap:8, justifyContent:"flex-end"}}>
+            <button className="btn btn-secondary" onClick={() => setShowDeclineConfirm(false)}>Cancel</button>
+            <button className="btn btn-danger" onClick={() => {handleQuoteAction("declined", "declined"); setShowDeclineConfirm(false);}}>Decline</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   WHATSAPP PANEL
+════════════════════════════════════════════════════ */
+function WhatsAppPanel({ticket,cfg,latestQuote,latestJob,latestInvoice,onLogged,staffList}){
+  const [custom,setCustom]=useState("");
+  if(!ticket)return<div style={{color:"var(--text4)",fontSize:13,textAlign:"center",padding:24}}>Select a ticket to send a WhatsApp message.</div>;
+  if(!ticket.phone)return<div style={{color:"var(--text4)",fontSize:13,textAlign:"center",padding:24}}>This ticket has no phone number on file.</div>;
+
+  const fire=async(template,extra)=>{
+    const msg=buildWaMsg(template,ticket,cfg,extra);
+    window.open(waUrl(ticket.phone,msg),"_blank");
+    await logWA(ticket.ref,template,ticket.phone,msg,"Office");
+    onLogged&&onLogged();
+  };
+
+  const sendStaffScheduled = async(staffPhone, staffName, date, time, team)=>{
+    const msg = `Hello ${staffName} 👋
+
+You have been scheduled for a cleaning job.
+
+📋 *Ticket:* ${ticket.ref}
+🧹 *Service:* ${SERVICES.find(s=>s.id===ticket.serviceType)?.label||ticket.serviceType||"—"}
+📍 *Address:* ${ticket.address||"—"}
+📅 *Date:* ${date||"—"}
+🕒 *Time:* ${time||"—"}
+👷 *Team:* ${team||"—"}
+
+Please confirm your availability. Thank you!
+
+_${cfg.bizName} — ${cfg.tagline}_`;
+    window.open(waUrl(staffPhone,msg),"_blank");
+    await logWA(ticket.ref,"jobScheduledStaff",staffPhone,msg,"Office");
+    onLogged&&onLogged();
+  };
+
+  return(
+    <div>
+      <div style={{fontSize:12,color:"var(--text3)",marginBottom:12}}>{ticket.clientName} · {ticket.phone} · {ticket.ref}</div>
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        <button className="btn btn-wa btn-block" onClick={()=>fire("quoteReady",{quoteRef:latestQuote?.id,total:latestQuote?.total?.toFixed(2)})}>📝 Quote Ready</button>
+        <button className="btn btn-wa btn-block" onClick={()=>fire("inspection",{date:ticket.requestedDate})}>📸 Inspection Booking</button>
+        <button className="btn btn-wa btn-block" onClick={()=>fire("reminder",{date:latestJob?.scheduledDate,time:latestJob?.scheduledTime,team:latestJob?.team})}>⏰ Appointment Reminder</button>
+        <button className="btn btn-wa btn-block" onClick={()=>fire("invoiceDue",{invoiceRef:latestInvoice?.id,total:latestInvoice?.total?.toFixed(2),dueDate:latestInvoice?.dueDate,overdue:latestInvoice&&new Date(latestInvoice.dueDate)<new Date()})}>💰 Invoice Reminder</button>
+        {staffList && staffList.length > 0 && (
+          <div style={{borderTop:"1px solid var(--border)", paddingTop:8, marginTop:4}}>
+            <div style={{fontSize:11, fontWeight:600, color:"var(--text3)", marginBottom:6}}>📤 Send Job Schedule to Staff</div>
+            {staffList.map(staff => (
+              <button key={staff.id} className="btn btn-secondary btn-sm btn-block" onClick={()=>sendStaffScheduled(staff.phone, staff.name, latestJob?.scheduledDate||"TBD", latestJob?.scheduledTime||"TBD", latestJob?.team||"Unassigned")}>
+                👷 {staff.name} ({staff.role})
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="divider"/>
+      <Lbl c="Custom Message"/>
+      <textarea className="field-input" style={{marginTop:6,minHeight:80}} value={custom} onChange={e=>setCustom(e.target.value)} placeholder="Type a custom message to send via WhatsApp…"/>
+      <button className="btn btn-wa btn-block" style={{marginTop:8}} disabled={!custom.trim()} onClick={()=>{fire("custom",{custom});setCustom("");}}>✍️ Send Custom Message</button>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   SITE INSPECTION FORM
+════════════════════════════════════════════════════ */
+function SiteInspectionForm({ticket, onSave, onClose, showToast}){
+  const [items, setItems] = useState(INSPECTION_ITEMS.reduce((acc,i)=>({...acc,[i]:false}), {}));
+  const [notes, setNotes] = useState("");
+  const [photos, setPhotos] = useState([]);
+  const [inspector, setInspector] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if(!inspector.trim()){showToast("Inspector name required","error");return;}
+    setSaving(true);
+    const passed = Object.values(items).filter(Boolean).length;
+    const total = Object.keys(items).length;
+    const data = {
+      ticketRef: ticket.ref,
+      inspector,
+      items,
+      notes,
+      photos,
+      passed,
+      total,
+      status: passed === total ? "passed" : "partial",
+      createdAt: ts()
+    };
+    await col("inspections").add(data);
+    await addNoteToTicket(ticket.ref, `Inspection: ${passed}/${total} items passed`, "note", inspector);
+    showToast(`✅ Inspection saved (${passed}/${total})`);
+    onSave && onSave(data);
+    onClose();
+    setSaving(false);
+  };
+
+  return(
+    <Modal title={`📸 Site Inspection — ${ticket.ref}`} onClose={onClose} wide>
+      <div style={{marginBottom:12, fontSize:13, color:"var(--text2)"}}>{ticket.clientName} · {ticket.address}</div>
+      
+      <Field l="Inspector Name *"><input className="field-input" value={inspector} onChange={e=>setInspector(e.target.value)}/></Field>
+      
+      <div style={{marginTop:12, marginBottom:12}}>
+        <div className="field-label" style={{marginBottom:8}}>Checklist</div>
+        {INSPECTION_ITEMS.map(item => (
+          <label key={item} style={{display:"flex", alignItems:"center", gap:8, padding:"6px 0", cursor:"pointer"}}>
+            <input type="checkbox" checked={items[item]} onChange={e=>setItems({...items, [item]: e.target.checked})}/>
+            <span style={{fontSize:13, color:"var(--text2)"}}>{item}</span>
+          </label>
+        ))}
+      </div>
+
+      <Field l="Notes"><textarea className="field-input" value={notes} onChange={e=>setNotes(e.target.value)} rows={3} placeholder="Additional inspection notes…"/></Field>
+      
+      <Field l="Photos"><PhotoUploader photos={photos} setPhotos={setPhotos} max={10}/></Field>
+
+      <div style={{display:"flex", justifyContent:"flex-end", gap:8, marginTop:16}}>
+        <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+        <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save Inspection"}</button>
+      </div>
+    </Modal>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   CLIENT SIGN-OFF MODAL
+════════════════════════════════════════════════════ */
+function ClientSignOffModal({ tickets, onSave, onClose, showToast }){
+  const [selectedRef, setSelectedRef] = useState("");
+  const [items, setItems] = useState(CLEANING_CHECKLIST.reduce((acc,i)=>({...acc,[i]:false}), {}));
+  const [rating, setRating] = useState(0);
+  const [feedback, setFeedback] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const selectedTicket = tickets.find(t => t.ref === selectedRef);
+
+  const getSignatureData = () => {
+    const canvas = document.getElementById("signoff-sig");
+    if(canvas) return canvas.toDataURL("image/png");
+    return null;
+  };
+
+  const save = async () => {
+    if (!selectedRef) { showToast("Please select a ticket", "error"); return; }
+    const done = Object.values(items).filter(Boolean).length;
+    const total = Object.keys(items).length;
+    if (done < total) { showToast("Please complete all checklist items", "error"); return; }
+    if (!rating) { showToast("Please provide a rating", "error"); return; }
+    setSaving(true);
+    
+    const sigData = getSignatureData();
+    const data = {
+      ticketRef: selectedRef,
+      items,
+      rating,
+      feedback,
+      signature: sigData,
+      completedAt: ts(),
+      status: "signed"
+    };
+    await col("signoffs").add(data);
+    await addNoteToTicket(selectedRef, `Client sign-off: ${rating}★ - ${feedback || "No feedback"}`, "signoff", "Client");
+    await fsUpdate("tickets", selectedRef, { status: "closed", rating, feedback, checklistItems: items });
+    showToast(`✅ Sign-off complete! ${rating}★`);
+    onSave && onSave(data);
+    onClose();
+    setSaving(false);
+  };
+
+  const completedTickets = tickets.filter(t => 
+    (t.status === "completed" || t.status === "invoiced" || t.status === "paid") && 
+    t.status !== "closed"
+  );
+
+  return(
+    <Modal title="✅ Client Sign-Off" onClose={onClose} wide>
+      <div style={{marginBottom:16}}>
+        <Field l="Select Completed Ticket *">
+          <select className="field-input" value={selectedRef} onChange={e => setSelectedRef(e.target.value)}>
+            <option value="">— Select Ticket —</option>
+            {completedTickets.map(t => (
+              <option key={t.ref} value={t.ref}>
+                {t.ref} — {t.clientName} ({t.status})
+              </option>
+            ))}
+          </select>
+          {selectedTicket && (
+            <div style={{marginTop:8, fontSize:12, color:"var(--text3)"}}>
+              {selectedTicket.clientName} · {selectedTicket.address}
+            </div>
+          )}
+        </Field>
+      </div>
+
+      {selectedTicket && (
+        <>
+          <div style={{marginBottom:16}}>
+            <div className="field-label" style={{marginBottom:8}}>Cleaning Checklist</div>
+            {CLEANING_CHECKLIST.map(item => (
+              <label key={item} style={{display:"flex", alignItems:"center", gap:8, padding:"4px 0", cursor:"pointer"}}>
+                <input type="checkbox" checked={items[item]} onChange={e => setItems({...items, [item]: e.target.checked})}/>
+                <span style={{fontSize:13, color:"var(--text2)"}}>{item}</span>
+              </label>
+            ))}
+          </div>
+
+          <div className="form-grid" style={{marginBottom:12}}>
+            <Field l="Rating *">
+              <StarRating value={rating} onChange={setRating}/>
+            </Field>
+            <Field l="Feedback">
+              <textarea className="field-input" value={feedback} onChange={e => setFeedback(e.target.value)} rows={3} placeholder="Client feedback…"/>
+            </Field>
+          </div>
+
+          <Field l="Client Signature">
+            <div style={{border:"1px solid var(--border)", borderRadius:10, padding:8, background:"#fff"}}>
+              <canvas id="signoff-sig" width="600" height="150" style={{width:"100%", touchAction:"none"}}/>
+              <button className="btn btn-secondary btn-sm" style={{marginTop:4}} onClick={() => {
+                const canvas = document.getElementById("signoff-sig");
+                const ctx = canvas.getContext("2d");
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+              }}>🗑 Clear</button>
+            </div>
+          </Field>
+        </>
+      )}
+
+      <div style={{display:"flex", justifyContent:"flex-end", gap:8, marginTop:16}}>
+        <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+        <button className="btn btn-primary" onClick={save} disabled={saving || !selectedRef}>
+          {saving ? "Saving…" : "Complete Sign-Off"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   MOBILE TEAM PORTAL (UPDATED - Auto-updates ticket status)
+════════════════════════════════════════════════════ */
+function MobileTeamPortal({jobs, tickets, cfg, showToast}){
+  const [teamName,setTeamName]=useState("");
+  const [authenticated,setAuthenticated]=useState(false);
+  const [teamJobs,setTeamJobs]=useState([]);
+  const [selectedJob,setSelectedJob]=useState(null);
+  const [showJobDetail,setShowJobDetail]=useState(false);
+
+  const login=()=>{
+    if(!teamName.trim()){showToast("Enter team name","error");return;}
+    if(!cfg.teams.includes(teamName)){showToast("Team not found","error");return;}
+    setAuthenticated(true);
+    setTeamJobs(jobs.filter(j=>j.team===teamName));
+  };
+
+  const updateJobStatus = async (jobId, status) => {
+    try {
+      await col("jobs").doc(jobId).update({status, updatedAt: ts(), updatedBy: teamName});
+      const job = jobs.find(j => j.id === jobId);
+      const ticketRef = job?.ticketRef;
+      
+      if (ticketRef) {
+        await addNoteToTicket(ticketRef, `Job status updated to ${status} by ${teamName}`, "note", teamName);
+        
+        if (status === "completed") {
+          await fsUpdate("tickets", ticketRef, { status: "completed" });
+          await addNoteToTicket(ticketRef, "✅ Job completed - ready for client sign-off", "stage", teamName);
+        }
+      }
+      
+      setTeamJobs(teamJobs.map(j => j.id === jobId ? {...j, status} : j));
+      showToast(`✅ Job ${status}`);
+    } catch(e) {
+      showToast(`Failed to update job`, "error");
+    }
+  };
+
+  if(!authenticated){
+    return(
+      <div className="page-content" style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"60vh"}}>
+        <div className="card" style={{maxWidth:400,width:"100%",padding:32}}>
+          <div style={{fontSize:24,textAlign:"center",marginBottom:12}}>👷</div>
+          <h2 style={{textAlign:"center",marginBottom:8}}>Team Portal</h2>
+          <p style={{textAlign:"center",color:"var(--text3)",fontSize:13,marginBottom:20}}>Enter your team name to view assigned jobs</p>
+          <Field l="Team Name">
+            <input className="field-input" value={teamName} onChange={e=>setTeamName(e.target.value)} placeholder="e.g. Team Alpha" autoFocus/>
+          </Field>
+          <button className="btn btn-primary btn-block" style={{marginTop:12}} onClick={login}>Login →</button>
+        </div>
+      </div>
+    );
+  }
+
+  if(showJobDetail && selectedJob){
+    const ticket=tickets.find(t=>t.ref===selectedJob.ticketRef);
+    return(
+      <div className="page-content">
+        <button className="btn btn-secondary btn-sm" style={{marginBottom:16}} onClick={()=>setShowJobDetail(false)}>← Back to jobs</button>
+        <div className="card" style={{marginBottom:16}}>
+          <div className="card-header">
+            <div className="card-title">{selectedJob.ticketRef}</div>
+            <StagePill s={selectedJob.status}/>
+          </div>
+          <div className="card-body">
+            <div className="detail-row"><div className="detail-key">Client</div><div className="detail-val">{ticket?.clientName||"—"}</div></div>
+            <div className="detail-row"><div className="detail-key">Address</div><div className="detail-val">{ticket?.address||"—"}</div></div>
+            <div className="detail-row"><div className="detail-key">Service</div><div className="detail-val">{ticket?.serviceType||"—"}</div></div>
+            <div className="detail-row"><div className="detail-key">Time</div><div className="detail-val">{selectedJob.scheduledTime||"—"}</div></div>
+            <div className="detail-row"><div className="detail-key">Notes</div><div className="detail-val">{selectedJob.notes||"—"}</div></div>
+          </div>
+        </div>
+
+        <div className="card" style={{marginBottom:16}}>
+          <div className="card-header"><div className="card-title">📸 Photos</div></div>
+          <div className="card-body">
+            <PhotoUploader 
+              photos={selectedJob.photos||[]} 
+              setPhotos={async(photos)=>{
+                setSelectedJob({...selectedJob,photos});
+                await col("jobs").doc(selectedJob.id).update({photos});
+              }} 
+            />
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-header"><div className="card-title">⚡ Actions</div></div>
+          <div className="card-body" style={{display:"flex",flexDirection:"column",gap:8}}>
+            {selectedJob.status==="scheduled"&&(
+              <button className="btn btn-primary btn-block" onClick={()=>updateJobStatus(selectedJob.id,"in-progress")}>▶️ Start Job</button>
+            )}
+            {selectedJob.status==="in-progress"&&(
+              <button className="btn btn-primary btn-block" onClick={()=>updateJobStatus(selectedJob.id,"completed")}>✅ Complete Job</button>
+            )}
+            <button className="btn btn-secondary btn-block" onClick={()=>{
+              const msg=`Hi, I'm from ${teamName} at ${ticket?.address||"your property"}. We're starting the cleaning work now.`;
+              window.open(waUrl(ticket?.phone,msg),"_blank");
+            }}>💬 Contact Client</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return(
+    <div className="page-content">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <h2 style={{fontSize:18}}>👷 {teamName}</h2>
+        <button className="btn btn-secondary btn-sm" onClick={()=>setAuthenticated(false)}>Logout</button>
+      </div>
+
+      <div className="stats-row" style={{gridTemplateColumns:"repeat(3,1fr)"}}>
+        <div className="stat-card"><div className="stat-val" style={{color:"#8B5CF6"}}>{teamJobs.filter(j=>j.status==="scheduled").length}</div><div className="stat-lbl">Scheduled</div></div>
+        <div className="stat-card"><div className="stat-val" style={{color:"#06B6D4"}}>{teamJobs.filter(j=>j.status==="in-progress").length}</div><div className="stat-lbl">In Progress</div></div>
+        <div className="stat-card"><div className="stat-val" style={{color:"#10B981"}}>{teamJobs.filter(j=>j.status==="completed").length}</div><div className="stat-lbl">Completed</div></div>
+      </div>
+
+      <div className="card">
+        <div className="card-header"><div className="card-title">Your Jobs</div></div>
+        <div className="card-body">
+          {teamJobs.length===0?<div style={{textAlign:"center",color:"var(--text4)",padding:24}}>No jobs assigned yet.</div>:
+            teamJobs.map(j=>{
+              const t=tickets.find(tk=>tk.ref===j.ticketRef);
+              return(
+                <div key={j.id} className="job-row" style={{cursor:"pointer"}} onClick={()=>{setSelectedJob(j);setShowJobDetail(true);}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:600,color:"var(--text)"}}>{j.ticketRef}</div>
+                    <div style={{fontSize:12,color:"var(--text3)"}}>{t?.clientName||"—"} · {j.scheduledDate}</div>
+                  </div>
+                  <StagePill s={j.status}/>
+                </div>
+              );
+            })
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── TICKET DETAIL ── */
+function TicketDetail({ticket, tickets, quotes, jobs, invoices, inspections, signoffs, cfg, onBack, showToast, setPage, setSel, staffList}){
+  const [showQuoteBuilder,setShowQuoteBuilder]=useState(false);
+  const [showScheduleJob,setShowScheduleJob]=useState(false);
+  const [showInvoiceBuilder,setShowInvoiceBuilder]=useState(false);
+  const [showWAPanel,setShowWAPanel]=useState(false);
+  const [showInspectionForm,setShowInspectionForm]=useState(false);
+  const [showSignoffModal,setShowSignoffModal]=useState(false);
+  const [localTicket,setLocalTicket]=useState(ticket);
+  const [newNote,setNewNote]=useState("");
+  const [savingNote,setSavingNote]=useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [editingField, setEditingField] = useState(null);
+  const [editValue, setEditValue] = useState("");
+
+  const ticketQuotes=(quotes||[]).filter(q=>q.ticketRef===localTicket?.ref);
+  const ticketJobs=(jobs||[]).filter(j=>j.ticketRef===localTicket?.ref);
+  const ticketInvoices=(invoices||[]).filter(i=>i.ticketRef===localTicket?.ref);
+  const ticketInspections=(inspections||[]).filter(i=>i.ticketRef===localTicket?.ref);
+  const ticketSignoffs=(signoffs||[]).filter(s=>s.ticketRef===localTicket?.ref);
+  const latestQuote=ticketQuotes.length?ticketQuotes.reduce((a,b)=>new Date(a.createdAt)>new Date(b.createdAt)?a:b):null;
+  const latestJob=ticketJobs.length?ticketJobs.reduce((a,b)=>new Date(a.createdAt)>new Date(b.createdAt)?a:b):null;
+  const latestInvoice=ticketInvoices.length?ticketInvoices.reduce((a,b)=>new Date(a.createdAt)>new Date(b.createdAt)?a:b):null;
+
+  if(!localTicket) return <div className="page-content"><div style={{textAlign:"center",padding:40,color:"var(--text4)"}}>Ticket not found.</div></div>;
+
+  const refreshTicket = async () => {
+    const snap = await col("tickets").doc(localTicket.ref).get();
+    if(snap.exists) setLocalTicket({...snap.data()});
+    setRefreshKey(k => k + 1);
+  };
+
+  const updateField=async(k,v)=>{
+    const changes={[k]:v,updatedAt:ts()};
+    await fsUpdate("tickets",localTicket.ref,changes);
+    setLocalTicket({...localTicket,[k]:v});
+    showToast(`Updated ${k}`);
+  };
+
+  const startEdit = (field, value) => {
+    setEditingField(field);
+    setEditValue(value || "");
+  };
+
+  const saveEdit = async () => {
+    if (editingField) {
+      await updateField(editingField, editValue);
+      setEditingField(null);
+      setEditValue("");
+    }
+  };
+
+  const advanceStage=async(k)=>{
+    const idx=STAGES.findIndex(s=>s.k===k);
+    if(idx<0)return;
+    const currentIdx=STAGES.findIndex(s=>s.k===localTicket.status);
+    if(idx<currentIdx)return;
+    await updateField("status",k);
+    await addNoteToTicket(localTicket.ref,`Stage moved to ${ST[k].l}`,"stage",cfg.shortName);
+    if(NOTIFY_STAGES.includes(k) && localTicket.phone){
+      const msg=buildWaMsg(k,localTicket,cfg,{
+        quoteRef:latestQuote?.id,
+        total:latestQuote?.total?.toFixed(2),
+        date:latestJob?.scheduledDate,
+        time:latestJob?.scheduledTime,
+        team:latestJob?.team,
+        invoiceRef:latestInvoice?.id,
+        dueDate:latestInvoice?.dueDate
+      });
+      if(msg) setTimeout(()=>{
+        window.open(waUrl(localTicket.phone,msg),"_blank");
+        logWA(localTicket.ref,k,localTicket.phone,msg,"Office");
+      },200);
+    }
+    showToast(`Stage: ${ST[k].l}`);
+  };
+
+  const addNote=async()=>{
+    if(!newNote.trim())return;
+    setSavingNote(true);
+    await addNoteToTicket(localTicket.ref,newNote,"note",cfg.shortName);
+    setLocalTicket({...localTicket,notes:[...(localTicket.notes||[]),{txt:newNote,at:ts(),type:"note",author:cfg.shortName}]});
+    setNewNote("");
+    setSavingNote(false);
+    showToast("Note added ✓");
+  };
+
+  const stageIdx=STAGES.findIndex(s=>s.k===localTicket.status);
+  const progress=stageIdx>=0?Math.round((stageIdx/(STAGES.length-1))*100):0;
+
+  const canSignoff = localTicket.status === "completed" || localTicket.status === "invoiced" || localTicket.status === "paid";
+
+  const renderEditableField = (label, field, value, type="text", options=[]) => {
+    const isEditing = editingField === field;
+    return (
+      <div className="detail-row">
+        <div className="detail-key">{label}</div>
+        <div className="detail-val" style={{display:"flex", gap:8, alignItems:"center"}}>
+          {isEditing ? (
+            <>
+              {type === "select" ? (
+                <select className="field-input" style={{flex:1}} value={editValue} onChange={e=>setEditValue(e.target.value)}>
+                  {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                </select>
+              ) : type === "textarea" ? (
+                <textarea className="field-input" style={{flex:1}} value={editValue} onChange={e=>setEditValue(e.target.value)} rows={2}/>
+              ) : (
+                <input className="field-input" style={{flex:1}} value={editValue} onChange={e=>setEditValue(e.target.value)}/>
+              )}
+              <button className="btn btn-primary btn-xs" onClick={saveEdit}>💾</button>
+              <button className="btn btn-secondary btn-xs" onClick={()=>{setEditingField(null);setEditValue("");}}>✕</button>
+            </>
+          ) : (
+            <>
+              <span>{value || "—"}</span>
+              <button className="btn btn-ghost btn-xs" onClick={()=>startEdit(field, value)}>✏️</button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return(
+    <div className="page-content" key={refreshKey}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <button className="btn btn-secondary btn-sm" onClick={onBack}>← Back</button>
+          <span className="mono" style={{fontSize:18,fontWeight:700,color:AC}}>{localTicket.ref}</span>
+          <StagePill s={localTicket.status}/>
+        </div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          <button className="btn btn-secondary btn-sm" onClick={()=>setShowWAPanel(!showWAPanel)}>💬 {showWAPanel?"Close":"WhatsApp"}</button>
+          <button className="btn btn-secondary btn-sm" onClick={()=>setShowQuoteBuilder(true)}>📝 Quote</button>
+          <button className="btn btn-secondary btn-sm" onClick={()=>setShowScheduleJob(true)}>📅 Schedule</button>
+          <button className="btn btn-secondary btn-sm" onClick={()=>setShowInvoiceBuilder(true)}>💰 Invoice</button>
+          <button className="btn btn-secondary btn-sm" onClick={()=>setShowInspectionForm(true)}>📸 Inspect</button>
+          {canSignoff && (
+            <button className="btn btn-success btn-sm" onClick={()=>setShowSignoffModal(true)}>✅ Sign-Off</button>
+          )}
+          <button className="btn btn-pdf btn-sm" onClick={()=>openPrintWindow(buildTicketPdfHtml(localTicket, cfg))}>📄 PDF</button>
+        </div>
+      </div>
+
+      <div style={{marginBottom:16,background:"var(--bg3)",borderRadius:8,height:6,overflow:"hidden"}}>
+        <div style={{width:`${progress}%`,height:"100%",background:"linear-gradient(90deg,#00C896,#0EA5E9)",transition:"width 0.5s"}}/>
+      </div>
+
+      <div className="stage-stepper" style={{marginBottom:16}}>
+        {STAGES.map((s,i)=>{
+          const isActive=localTicket.status===s.k;
+          const isDone=stageIdx>i;
+          return(
+            <button key={s.k} className="stage-pill" style={{
+              background:isActive?"rgba(0,200,150,0.12)":isDone?"rgba(16,185,129,0.08)":"transparent",
+              borderColor:isActive?AC:isDone?"#10B981":"var(--border)",
+              color:isActive?AC:isDone?"#10B981":"var(--text3)",
+              cursor:stageIdx>=i?"pointer":"default",
+            }} onClick={()=>{if(stageIdx>=i)advanceStage(s.k);}}>
+              <span className="sp-dot" style={{background:isActive?AC:isDone?"#10B981":"var(--border2)"}}/>
+              {s.l}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="tk-detail-grid">
+        <div className="card">
+          <div className="card-header"><div className="card-title">👤 Customer</div></div>
+          <div className="card-body" style={{padding:"12px 16px"}}>
+            {renderEditableField("Name", "clientName", localTicket.clientName)}
+            {renderEditableField("Phone", "phone", localTicket.phone)}
+            {renderEditableField("Email", "email", localTicket.email)}
+            {renderEditableField("Company", "company", localTicket.company)}
+            {renderEditableField("Address", "address", localTicket.address, "textarea")}
+            {renderEditableField("Property Type", "propertyType", localTicket.propertyType, "select", PROPERTY_TYPES)}
+            <div className="detail-row"><div className="detail-key">Service</div><div className="detail-val">{SERVICES.find(s=>s.id===localTicket.serviceType)?.label||localTicket.serviceType||"—"}</div></div>
+            {renderEditableField("Priority", "priority", localTicket.priority, "select", PRIORITIES)}
+            {renderEditableField("Requested Date", "requestedDate", localTicket.requestedDate)}
+            <div className="detail-row"><div className="detail-key">Created</div><div className="detail-val" style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10}}>{localTicket.createdAt?new Date(localTicket.createdAt).toLocaleString("en-ZA"):"—"}</div></div>
+          </div>
+          <div className="card-header" style={{borderTop:"1px solid var(--border)"}}><div className="card-title">📎 Linked</div></div>
+          <div className="card-body" style={{padding:"10px 16px"}}>
+            {ticketQuotes.length>0&&<div style={{fontSize:12,color:AC}}>📝 {ticketQuotes.length} quotation(s)</div>}
+            {ticketJobs.length>0&&<div style={{fontSize:12,color:"#8B5CF6"}}>📅 {ticketJobs.length} job(s)</div>}
+            {ticketInvoices.length>0&&<div style={{fontSize:12,color:"#F59E0B"}}>💰 {ticketInvoices.length} invoice(s)</div>}
+            {ticketInspections.length>0&&<div style={{fontSize:12,color:"#F97316"}}>📸 {ticketInspections.length} inspection(s)</div>}
+            {ticketSignoffs.length>0&&<div style={{fontSize:12,color:"#10B981"}}>✅ {ticketSignoffs.length} sign-off(s)</div>}
+          </div>
+        </div>
+
+        <div>
+          <div className="card" style={{marginBottom:12}}>
+            <div className="card-header">
+              <div className="card-title">⏳ Timeline</div>
+              <button className="btn btn-pdf btn-xs" onClick={()=>openPrintWindow(buildTicketPdfHtml(localTicket, cfg))}>📄 PDF</button>
+            </div>
+            <div className="card-body" style={{maxHeight:300,overflowY:"auto",padding:"12px 16px"}}>
+              {(localTicket.notes||[]).length===0?<div style={{textAlign:"center",color:"var(--text4)",fontSize:12,padding:12}}>No activity yet.</div>:
+                [...(localTicket.notes||[])].reverse().slice(0,20).map((n,i)=>(
+                  <div key={i} className={`tl-item${n.type==="stage"?" done":""}`}>
+                    <div className="tl-dot" style={{background:n.type==="stage"?"#10B981":"var(--bg3)",borderColor:n.type==="stage"?"#10B981":"var(--border2)"}}>{n.type==="stage"?"✓":"•"}</div>
+                    <div>
+                      <div className="tl-label">{n.type==="stage"?n.txt:n.txt}</div>
+                      <div className="tl-time">{n.at?new Date(n.at).toLocaleString("en-ZA"):""}</div>
+                    </div>
+                  </div>
+                ))
+              }
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-header"><div className="card-title">📝 Notes</div></div>
+            <div className="card-body" style={{padding:"12px 16px"}}>
+              <div style={{display:"flex",gap:8}}>
+                <textarea className="field-input" value={newNote} onChange={e=>setNewNote(e.target.value)} placeholder="Add a note..." style={{flex:1,minHeight:60}}/>
+                <button className="btn btn-primary btn-sm" onClick={addNote} disabled={savingNote||!newNote.trim()} style={{alignSelf:"flex-start"}}>{savingNote?"…":"Add"}</button>
+              </div>
+              {(localTicket.notes||[]).filter(n=>n.type!=="stage").slice(-5).reverse().map((n,i)=>(
+                <div key={i} className="note-item">
+                  <div className="note-text">{n.txt}</div>
+                  <div className="note-meta">{n.author||"Office"} · {n.at?new Date(n.at).toLocaleString("en-ZA"):""}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div className="card" style={{marginBottom:12}}>
+            <div className="card-header"><div className="card-title">🎫 Ticket Management</div></div>
+            <div className="card-body">
+              <TicketActions ticket={localTicket} onAction={refreshTicket} showToast={showToast} />
+            </div>
+          </div>
+
+          {latestQuote && (
+            <div className="card" style={{marginBottom:12}}>
+              <div className="card-header">
+                <div className="card-title">📝 Quote: {latestQuote.id}</div>
+                <QuoteStatusPill s={latestQuote.status} />
+              </div>
+              <div className="card-body">
+                <div style={{fontSize:12, color:"var(--text3)", marginBottom:8}}>Total: R {Number(latestQuote.total||0).toFixed(2)}</div>
+                <QuoteActions quote={latestQuote} ticket={localTicket} onAction={refreshTicket} showToast={showToast} />
+              </div>
+            </div>
+          )}
+
+          <div className="card" style={{marginBottom:12}}>
+            <div className="card-header"><div className="card-title">⚡ Quick Actions</div></div>
+            <div className="card-body" style={{display:"flex",flexDirection:"column",gap:6}}>
+              <button className="btn btn-primary btn-sm btn-block" onClick={()=>setShowQuoteBuilder(true)}>📝 New Quotation</button>
+              <button className="btn btn-secondary btn-sm btn-block" onClick={()=>setShowScheduleJob(true)}>📅 Schedule Job</button>
+              <button className="btn btn-secondary btn-sm btn-block" onClick={()=>setShowInvoiceBuilder(true)}>💰 Create Invoice</button>
+              <button className="btn btn-secondary btn-sm btn-block" onClick={()=>setShowInspectionForm(true)}>📸 Site Inspection</button>
+              {canSignoff && (
+                <button className="btn btn-success btn-sm btn-block" onClick={()=>setShowSignoffModal(true)}>✅ Client Sign-Off</button>
+              )}
+              <button className="btn btn-secondary btn-sm btn-block" onClick={()=>setShowWAPanel(!showWAPanel)}>💬 {showWAPanel?"Close":"WhatsApp"}</button>
+              <button className="btn btn-pdf btn-sm btn-block" onClick={()=>openPrintWindow(buildTicketPdfHtml(localTicket, cfg))}>📄 PDF Ticket</button>
+            </div>
+          </div>
+
+          {showWAPanel&&(
+            <div className="card" style={{marginBottom:12}}>
+              <div className="card-header"><div className="card-title">💬 WhatsApp</div></div>
+              <div className="card-body">
+                <WhatsAppPanel ticket={localTicket} cfg={cfg} latestQuote={latestQuote} latestJob={latestJob} latestInvoice={latestInvoice} onLogged={()=>showToast("WhatsApp logged ✓")} staffList={staffList}/>
+              </div>
+            </div>
+          )}
+
+          {ticketJobs.length>0&&(
+            <div className="card" style={{marginBottom:12}}>
+              <div className="card-header"><div className="card-title">🚚 Jobs</div></div>
+              <div className="card-body" style={{padding:"8px 12px"}}>
+                {ticketJobs.map(j=>(
+                  <div key={j.id} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid var(--border)"}}>
+                    <span style={{fontSize:12}}>{j.scheduledDate} {j.scheduledTime}</span>
+                    <span style={{fontSize:12,color:"var(--text3)"}}>{j.team||"Unassigned"} <StagePill s={j.status}/></span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {ticketInvoices.length>0&&(
+            <div className="card">
+              <div className="card-header"><div className="card-title">💰 Invoices</div></div>
+              <div className="card-body" style={{padding:"8px 12px"}}>
+                {ticketInvoices.map(i=>(
+                  <div key={i.id} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid var(--border)"}}>
+                    <span style={{fontSize:12,fontWeight:600,color:AC}}>{i.id}</span>
+                    <span style={{fontSize:12,color:"var(--text3)"}}>R {Number(i.total||0).toFixed(2)} <InvStatusPill s={i.status}/></span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {showQuoteBuilder&&<QuoteBuilderModal ticket={localTicket} cfg={cfg} onClose={()=>setShowQuoteBuilder(false)} onSaved={()=>{setShowQuoteBuilder(false);showToast("Quote saved ✓");setPage("quotations");}} showToast={showToast}/>}
+      {showScheduleJob&&<ScheduleJobModal ticket={localTicket} tickets={[localTicket]} cfg={cfg} onClose={()=>setShowScheduleJob(false)} onSaved={()=>{setShowScheduleJob(false);showToast("Job scheduled ✓");setPage("jobs");}} showToast={showToast} defaultDate={localTicket.requestedDate}/>}
+      {showInvoiceBuilder&&<InvoiceBuilderModal ticket={localTicket} quote={latestQuote} cfg={cfg} onClose={()=>setShowInvoiceBuilder(false)} onSaved={()=>{setShowInvoiceBuilder(false);showToast("Invoice saved ✓");setPage("invoices");}} showToast={showToast}/>}
+      {showInspectionForm&&<SiteInspectionForm ticket={localTicket} onClose={()=>setShowInspectionForm(false)} onSave={()=>{setShowInspectionForm(false);showToast("Inspection saved ✓");}} showToast={showToast}/>}
+      {showSignoffModal&&<ClientSignOffModal tickets={tickets} onClose={()=>setShowSignoffModal(false)} onSave={()=>{setShowSignoffModal(false);showToast("Sign-off complete ✓");setPage("dashboard");}} showToast={showToast}/>}
+    </div>
+  );
+}
+
+/* ── QUOTE BUILDER ── */
+function LineItemsEditor({lineItems,setLineItems,cfg}){
+  const update=(i,k,v)=>setLineItems(li=>li.map((it,j)=>j===i?{...it,[k]:v}:it));
+  const subtotal=lineItems.reduce((a,it)=>a+(Number(it.qty||0)*Number(it.unitCost||0)),0);
+  const vat=subtotal*(cfg.vatRate/100);
+  const total=subtotal+vat;
+  return(
+    <div>
+      <table className="line-tbl">
+        <thead><tr><th style={{width:110}}>Category</th><th>Description</th><th style={{width:60}}>Qty</th><th style={{width:100}}>Unit Cost</th><th style={{width:100}}>Total</th><th style={{width:30}}></th></tr></thead>
+        <tbody>
+          {lineItems.map((it,i)=>(
+            <tr key={i}>
+              <td><select className="field-input" style={{padding:"6px 8px",fontSize:12}} value={it.type} onChange={e=>update(i,"type",e.target.value)}>{QUOTE_LINE_TYPES.map(t=><option key={t}>{t}</option>)}</select></td>
+              <td><input value={it.desc} onChange={e=>update(i,"desc",e.target.value)} placeholder="Description"/></td>
+              <td><input type="number" min="0" value={it.qty} onChange={e=>update(i,"qty",e.target.value)}/></td>
+              <td><input type="number" min="0" value={it.unitCost} onChange={e=>update(i,"unitCost",e.target.value)}/></td>
+              <td style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:12,color:"var(--text2)",padding:"6px 8px"}}>R {(Number(it.qty||0)*Number(it.unitCost||0)).toFixed(2)}</td>
+              <td><button className="btn btn-ghost btn-xs" onClick={()=>setLineItems(li=>li.filter((_,j)=>j!==i))}>✕</button></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <button className="btn btn-secondary btn-sm" onClick={()=>setLineItems(li=>[...li,{type:"Labour",desc:"",qty:1,unitCost:0}])}>+ Add Line Item</button>
+      <div className="totals-box" style={{marginTop:14}}>
+        <div className="totals-row"><span>Subtotal</span><span>R {subtotal.toFixed(2)}</span></div>
+        <div className="totals-row"><span>VAT ({cfg.vatRate}%)</span><span>R {vat.toFixed(2)}</span></div>
+        <div className="totals-row grand"><span>Total</span><span>R {total.toFixed(2)}</span></div>
+      </div>
+    </div>
+  );
+}
+
+function QuoteBuilderModal({ticket,cfg,onClose,onSaved,showToast}){
+  const [lineItems,setLineItems]=useState([{type:"Labour",desc:"General cleaning labour",qty:1,unitCost:0}]);
+  const [saved,setSaved]=useState(null);
+  const [saving,setSaving]=useState(false);
+
+  const totals=()=>{
+    const subtotal=lineItems.reduce((a,it)=>a+(Number(it.qty||0)*Number(it.unitCost||0)),0);
+    const vat=subtotal*(cfg.vatRate/100);
+    return{subtotal,vat,total:subtotal+vat};
+  };
+
+  const save=async(status)=>{
+    setSaving(true);
+    try{
+      const {subtotal,vat,total}=totals();
+      let doc=saved;
+      if(!doc){
+        const {n,year}=await nextNumber("quote");
+        const ref=makeQuoteRef(year,n);
+        doc={id:ref,ticketRef:ticket.ref,clientName:ticket.clientName,phone:ticket.phone,address:ticket.address,createdAt:ts()};
+        await col("quotes").doc(ref).set({...doc,lineItems,subtotal,vat,total,status});
+      }else{
+        await col("quotes").doc(doc.id).update({lineItems,subtotal,vat,total,status,updatedAt:ts()});
+      }
+      const fullDoc={...doc,lineItems,subtotal,vat,total,status};
+      setSaved(fullDoc);
+      await fsUpdate("tickets",ticket.ref,{quoteRef:fullDoc.id,status:STAGES.findIndex(s=>s.k===ticket.status)<STAGES.findIndex(s=>s.k==="quotation")?"quotation":ticket.status});
+      showToast(`Quotation ${fullDoc.id} saved ✓`);
+      onSaved&&onSaved(fullDoc);
+    }catch(e){console.error(e);showToast("Failed to save quotation","error");}
+    setSaving(false);
+  };
+
+  const sendWA=async()=>{
+    if(!saved)return;
+    const msg=buildWaMsg("quoteReady",ticket,cfg,{quoteRef:saved.id,total:saved.total.toFixed(2)});
+    window.open(waUrl(ticket.phone,msg),"_blank");
+    await logWA(ticket.ref,"quoteReady",ticket.phone,msg,"Office");
+    await fsUpdate("quotes",saved.id,{status:"sent"});
+    setSaved(s=>({...s,status:"sent"}));
+    showToast("WhatsApp opened — quote marked as sent ✓");
+  };
+
+  return(
+    <Modal title={`📝 Quote Builder — ${ticket.ref}`} onClose={onClose} wide>
+      <div style={{marginBottom:14,fontSize:12,color:"var(--text3)"}}>{ticket.clientName} · {ticket.phone} · {ticket.address||"No address on file"}</div>
+      <LineItemsEditor lineItems={lineItems} setLineItems={setLineItems} cfg={cfg}/>
+      <div className="divider"/>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
+        {saved&&<button className="btn btn-pdf btn-sm" onClick={()=>openPrintWindow(buildQuotePdfHtml(saved,cfg))}>🖨️ Print / PDF</button>}
+        {saved&&ticket.phone&&<button className="btn btn-wa btn-sm" onClick={sendWA}>💬 Send via WhatsApp</button>}
+        <button className="btn btn-secondary" onClick={()=>save("draft")} disabled={saving}>{saving?"Saving…":saved?"Update Draft":"Save Draft"}</button>
+        <button className="btn btn-primary" onClick={()=>save(saved?.status||"draft")} disabled={saving}>{saved?"✓ Saved — Update":"Save Quotation"}</button>
+      </div>
+      {saved&&<div style={{marginTop:10,fontSize:12,color:AC}}>✓ Saved as {saved.id} <QuoteStatusPill s={saved.status}/></div>}
+    </Modal>
+  );
+}
+
+/* ── SCHEDULE JOB MODAL (AUTO-CREATES JOB IN FIRESTORE) ── */
+function ScheduleJobModal({ticket,tickets,cfg,onClose,onSaved,showToast,defaultDate}){
+  const [ticketRef,setTicketRef]=useState(ticket?.ref||"");
+  const [date,setDate]=useState(defaultDate||new Date().toISOString().slice(0,10));
+  const [time,setTime]=useState("09:00");
+  const [team,setTeam]=useState(cfg.teams[0]||"");
+  const [address,setAddress]=useState(ticket?.address||"");
+  const [saving,setSaving]=useState(false);
+  const pickedTicket=ticket||tickets?.find(t=>t.ref===ticketRef);
+
+  // Auto-populate address when ticket changes
+  useEffect(() => {
+    if(pickedTicket?.address) setAddress(pickedTicket.address);
+  }, [pickedTicket]);
+
+  const save=async()=>{
+    if(!ticketRef){showToast("Select a ticket first","error");return;}
+    setSaving(true);
+    try{
+      // Create the job in Firestore under mgfc_jobs collection
+      const jobData = {
+        ticketRef,
+        scheduledDate: date,
+        scheduledTime: time,
+        team,
+        address: address || pickedTicket?.address || "",
+        status: "scheduled",
+        createdAt: ts(),
+        updatedAt: ts(),
+        source: "main_portal"
+      };
+      const ref = await col("jobs").add(jobData);
+      // Update ticket status
+      await fsUpdate("tickets", ticketRef, { 
+        status: "scheduled", 
+        assignedTeam: team,
+        jobId: ref.id,
+        scheduledDate: date,
+        scheduledTime: time
+      });
+      await addNoteToTicket(ticketRef, `Job scheduled for ${date} at ${time} with ${team}`, "stage", "Office");
+      showToast(`✅ Job scheduled for ${team} on ${date}`);
+      onSaved && onSaved({id:ref.id, ...jobData});
+      onClose();
+    }catch(e){console.error(e);showToast("Failed to schedule job","error");}
+    setSaving(false);
+  };
+
+  return(
+    <Modal title="📅 Schedule Job" onClose={onClose}>
+      {!ticket&&(
+        <Field l="Ticket *" span>
+          <select className="field-input" value={ticketRef} onChange={e=>{
+            setTicketRef(e.target.value);
+            const t = tickets?.find(tk=>tk.ref===e.target.value);
+            if(t?.address) setAddress(t.address);
+          }}>
+            <option value="">— Select ticket —</option>
+            {(tickets||[]).map(t=><option key={t.ref} value={t.ref}>{t.ref} — {t.clientName}</option>)}
+          </select>
+        </Field>
+      )}
+      {pickedTicket&&<div style={{marginBottom:12,fontSize:12,color:"var(--text3)"}}>{pickedTicket.clientName} · {pickedTicket.address||"No address"}</div>}
+      <div className="form-grid">
+        <Field l="Date *"><input type="date" className="field-input" value={date} onChange={e=>setDate(e.target.value)}/></Field>
+        <Field l="Time"><input type="time" className="field-input" value={time} onChange={e=>setTime(e.target.value)}/></Field>
+        <Field l="Team" span>
+          <select className="field-input" value={team} onChange={e=>setTeam(e.target.value)}>
+            {cfg.teams.map(tm=><option key={tm}>{tm}</option>)}
+          </select>
+        </Field>
+        <Field l="Address" span>
+          <textarea className="field-input" value={address} onChange={e=>setAddress(e.target.value)} rows={2} placeholder="Property address"/>
+        </Field>
+      </div>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:16}}>
+        <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+        <button className="btn btn-primary" onClick={save} disabled={saving}>{saving?"Scheduling…":"Schedule Job"}</button>
+      </div>
+    </Modal>
+  );
+}
+
+/* ── INVOICE BUILDER MODAL ── */
+function InvoiceBuilderModal({ticket,quote,cfg,onClose,onSaved,showToast}){
+  const [lineItems,setLineItems]=useState(quote?.lineItems?.map(li=>({...li}))||[{type:"Labour",desc:"Cleaning service rendered",qty:1,unitCost:0}]);
+  const [dueDate,setDueDate]=useState(new Date(Date.now()+7*86400000).toISOString().slice(0,10));
+  const [saved,setSaved]=useState(null);
+  const [saving,setSaving]=useState(false);
+  const [payAmt,setPayAmt]=useState("");
+
+  const totals=()=>{
+    const subtotal=lineItems.reduce((a,it)=>a+(Number(it.qty||0)*Number(it.unitCost||0)),0);
+    const vat=subtotal*(cfg.vatRate/100);
+    return{subtotal,vat,total:subtotal+vat};
+  };
+
+  const save=async()=>{
+    setSaving(true);
+    try{
+      const {subtotal,vat,total}=totals();
+      let doc=saved;
+      if(!doc){
+        const {n,year}=await nextNumber("invoice");
+        const ref=makeInvoiceRef(year,n);
+        doc={id:ref,ticketRef:ticket.ref,quoteRef:quote?.id||ticket.quoteRef||"",clientName:ticket.clientName,phone:ticket.phone,address:ticket.address,createdAt:ts(),payments:[],amountPaid:0};
+        await col("invoices").doc(ref).set({...doc,lineItems,subtotal,vat,total,dueDate,status:"draft"});
+      }else{
+        await col("invoices").doc(doc.id).update({lineItems,subtotal,vat,total,dueDate,updatedAt:ts()});
+      }
+      const fullDoc={...doc,lineItems,subtotal,vat,total,dueDate,status:doc.status||"draft"};
+      setSaved(fullDoc);
+      await fsUpdate("tickets",ticket.ref,{invoiceRef:fullDoc.id,status:"invoiced"});
+      showToast(`Invoice ${fullDoc.id} saved ✓`);
+      onSaved&&onSaved(fullDoc);
+    }catch(e){console.error(e);showToast("Failed to save invoice","error");}
+    setSaving(false);
+  };
+
+  const markSent=async()=>{
+    await fsUpdate("invoices",saved.id,{status:"sent"});
+    setSaved(s=>({...s,status:"sent"}));
+    showToast("Marked as sent ✓");
+  };
+
+  const recordPayment=async()=>{
+    const amt=Number(payAmt);
+    if(!amt||amt<=0)return;
+    const payments=[...(saved.payments||[]),{amount:amt,at:ts()}];
+    const amountPaid=payments.reduce((a,p)=>a+p.amount,0);
+    const status=amountPaid>=saved.total?"paid":"partial";
+    const changes={payments,amountPaid,status};
+    if(status==="paid")changes.paidAt=ts();
+    await fsUpdate("invoices",saved.id,changes);
+    setSaved(s=>({...s,...changes}));
+    setPayAmt("");
+    if(status==="paid")await fsUpdate("tickets",ticket.ref,{status:"paid"});
+    showToast(status==="paid"?"Invoice fully paid ✓":"Payment recorded ✓");
+  };
+
+  const sendWA=async()=>{
+    if(!saved)return;
+    const msg=buildWaMsg("invoiceDue",ticket,cfg,{invoiceRef:saved.id,total:saved.total.toFixed(2),dueDate:saved.dueDate,overdue:new Date(saved.dueDate)<new Date()});
+    window.open(waUrl(ticket.phone,msg),"_blank");
+    await logWA(ticket.ref,"invoiceDue",ticket.phone,msg,"Office");
+    showToast("WhatsApp opened ✓");
+  };
+
+  return(
+    <Modal title={`💰 Invoice Builder — ${ticket.ref}`} onClose={onClose} wide>
+      <div style={{marginBottom:14,fontSize:12,color:"var(--text3)"}}>{ticket.clientName} · {ticket.phone} · {ticket.address||"No address on file"}</div>
+      {quote&&!saved&&<div style={{marginBottom:10,fontSize:11,color:AC}}>✓ Line items copied from quotation {quote.id}</div>}
+      <LineItemsEditor lineItems={lineItems} setLineItems={setLineItems} cfg={cfg}/>
+      <div className="form-grid" style={{marginTop:12,maxWidth:240}}>
+        <Field l="Due Date"><input type="date" className="field-input" value={dueDate} onChange={e=>setDueDate(e.target.value)}/></Field>
+      </div>
+      <div className="divider"/>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
+        {saved&&<button className="btn btn-pdf btn-sm" onClick={()=>openPrintWindow(buildInvoicePdfHtml(saved,cfg))}>🖨️ Print / PDF</button>}
+        {saved&&saved.status==="draft"&&<button className="btn btn-secondary btn-sm" onClick={markSent}>📤 Mark as Sent</button>}
+        {saved&&ticket.phone&&<button className="btn btn-wa btn-sm" onClick={sendWA}>💬 Send Reminder</button>}
+        <button className="btn btn-primary" onClick={save} disabled={saving}>{saving?"Saving…":saved?"Update Invoice":"Save Invoice"}</button>
+      </div>
+      {saved&&(
+        <div style={{marginTop:14,background:"var(--bg3)",borderRadius:10,padding:14}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <span style={{fontSize:12,color:"var(--text2)"}}>✓ Saved as <strong style={{color:AC}}>{saved.id}</strong></span>
+            <InvStatusPill s={saved.status}/>
+          </div>
+          <div style={{fontSize:12,color:"var(--text3)",marginBottom:8}}>Paid so far: R {Number(saved.amountPaid||0).toFixed(2)} / R {Number(saved.total||0).toFixed(2)}</div>
+          {saved.status!=="paid"&&(
+            <div style={{display:"flex",gap:6}}>
+              <input className="field-input" type="number" placeholder="Amount received" value={payAmt} onChange={e=>setPayAmt(e.target.value)} style={{flex:1}}/>
+              <button className="btn btn-primary btn-sm" onClick={recordPayment}>Record Payment</button>
+            </div>
+          )}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+/* ── ENHANCED SCHEDULING ── */
+function EnhancedScheduling({jobs, tickets, cfg, showToast, setPage}){
+  const [view,setView]=useState("week");
+  const [selectedDate,setSelectedDate]=useState(new Date());
+  const [dragJob,setDragJob]=useState(null);
+  const [showAssignModal,setShowAssignModal]=useState(false);
+  const [selectedJob,setSelectedJob]=useState(null);
+
+  const getWeekDays=()=>{
+    const start=new Date(selectedDate);
+    start.setDate(start.getDate()-start.getDay());
+    return Array.from({length:7},(_,i)=>{
+      const d=new Date(start);
+      d.setDate(d.getDate()+i);
+      return d;
+    });
+  };
+
+  const jobsByDate=(dateStr)=>jobs.filter(j=>j.scheduledDate===dateStr);
+
+  const handleDragStart=(j,e)=>{
+    setDragJob(j);
+    e.dataTransfer.effectAllowed="move";
+  };
+
+  const handleDrop=(dateStr,e)=>{
+    e.preventDefault();
+    if(!dragJob)return;
+    const targetJobs=jobsByDate(dateStr);
+    const conflict=targetJobs.some(j=>j.team===dragJob.team && j.id!==dragJob.id);
+    if(conflict){
+      showToast("⚠️ Team conflict on this date!","error");
+      return;
+    }
+    col("jobs").doc(dragJob.id).update({scheduledDate:dateStr,updatedAt:ts()});
+    showToast(`📅 Moved job to ${dateStr}`);
+    setDragJob(null);
+  };
+
+  const assignTeam=async(jobId,team)=>{
+    await col("jobs").doc(jobId).update({team,assignedAt:ts(),assignedBy:"Office"});
+    await addJobNote(jobId,selectedJob?.ticketRef,`Assigned to ${team}`,"assignment","Office");
+    showToast(`👷 Assigned to ${team}`);
+    setShowAssignModal(false);
+  };
+
+  return(
+    <div className="page-content">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <div style={{display:"flex",gap:12,alignItems:"center"}}>
+          <button className="btn btn-secondary btn-sm" onClick={()=>{const d=new Date(selectedDate);d.setDate(d.getDate()-7);setSelectedDate(d);}}>←</button>
+          <span style={{fontWeight:700,color:"var(--text)"}}>{selectedDate.toLocaleDateString("en-ZA",{month:"long",year:"numeric"})}</span>
+          <button className="btn btn-secondary btn-sm" onClick={()=>{const d=new Date(selectedDate);d.setDate(d.getDate()+7);setSelectedDate(d);}}>→</button>
+          <button className="btn btn-secondary btn-sm" onClick={()=>setSelectedDate(new Date())}>Today</button>
+        </div>
+        <div className="cal-toggle">
+          <button className={view==="week"?"active":""} onClick={()=>setView("week")}>Week</button>
+          <button className={view==="month"?"active":""} onClick={()=>setView("month")}>Month</button>
+        </div>
+      </div>
+
+      {view==="week"?(
+        <div className="week-grid">
+          {getWeekDays().map((d,i)=>{
+            const ds=d.toISOString().slice(0,10);
+            const dayJobs=jobsByDate(ds);
+            const isToday=ds===new Date().toISOString().slice(0,10);
+            return(
+              <div key={i} className={`week-day${isToday?" today":""}`} onDragOver={e=>e.preventDefault()} onDrop={e=>handleDrop(ds,e)}>
+                <div className="week-day-head">{d.toLocaleDateString("en-ZA",{weekday:"short"})} <span className="wd-date">{d.getDate()}</span> <span style={{fontSize:9,color:"var(--text4)",marginLeft:4}}>{dayJobs.length}</span></div>
+                <div className="week-day-body">
+                  {dayJobs.map(j=>{
+                    const t=tickets.find(tk=>tk.ref===j.ticketRef);
+                    return(
+                      <div key={j.id} className="job-card" draggable onDragStart={e=>handleDragStart(j,e)} style={{borderLeftColor:j.status==="in-progress"?"#06B6D4":j.status==="completed"?"#10B981":"#8B5CF6"}} onClick={()=>{setSelectedJob(j);setShowAssignModal(true);}}>
+                        <div className="jc-ref">{j.ticketRef}</div>
+                        <div className="jc-name">{t?.clientName||"Unknown"}</div>
+                        <div className="jc-team">👷 {j.team||"Unassigned"} · {j.scheduledTime||""}</div>
+                      </div>
+                    );
+                  })}
+                  <button className="btn btn-ghost btn-xs" style={{marginTop:4,color:"var(--text4)"}} onClick={()=>setPage("tickets")}>+ Add job</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ):(
+        <div className="month-grid">
+          {Array.from({length:new Date(selectedDate.getFullYear(),selectedDate.getMonth()+1,0).getDate()},(_,i)=>{
+            const d=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),i+1);
+            const ds=d.toISOString().slice(0,10);
+            const dayJobs=jobsByDate(ds);
+            const isToday=ds===new Date().toISOString().slice(0,10);
+            return(
+              <div key={i} className={`month-cell${isToday?" today":""}`}>
+                <div className="mc-num">{d.getDate()}</div>
+                {dayJobs.length>0&&<span className="mc-count">{dayJobs.length}</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {showAssignModal&&selectedJob&&(
+        <Modal title="👷 Assign Team" onClose={()=>setShowAssignModal(false)}>
+          <div style={{marginBottom:12}}>
+            <div style={{fontSize:13,color:"var(--text2)"}}>Job: {selectedJob.ticketRef}</div>
+            <div style={{fontSize:12,color:"var(--text3)"}}>Current: {selectedJob.team||"Unassigned"}</div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {cfg.teams.map(t=><button key={t} className="btn btn-secondary btn-block" onClick={()=>assignTeam(selectedJob.id,t)}>{t} {selectedJob.team===t&&"✓"}</button>)}
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/* ── NEW TICKET MODAL ── */
+function NewTicketModal({onClose,onSaved,cfg,showToast}){
+  const [form,setForm]=useState({clientName:"",phone:"",email:"",company:"",propertyType:"",address:"",serviceType:"",priority:"Normal",requestedDate:""});
+  const [loading,setLoading]=useState(false);
+
+  const save=async()=>{
+    if(!form.clientName.trim()){showToast("Client name is required","error");return;}
+    if(!form.phone.trim()){showToast("Phone number is required","error");return;}
+    if(!form.serviceType){showToast("Service type is required","error");return;}
+    setLoading(true);
+    try{
+      await upsertCustomer(form);
+      const {n,year}=await nextNumber("ticket");
+      const ref=makeTicketRef(year,n);
+      const doc={ref,clientName:form.clientName,phone:form.phone,email:form.email,company:form.company,propertyType:form.propertyType,address:form.address,serviceType:form.serviceType,priority:form.priority||"Normal",requestedDate:form.requestedDate,status:"new-request",notes:[],createdAt:ts(),updatedAt:ts()};
+      await col("tickets").doc(ref).set(doc);
+      await addNoteToTicket(ref,"Ticket created","stage",cfg.shortName);
+      showToast(`Ticket ${ref} created ✓`);
+      onSaved&&onSaved(doc);
+      onClose();
+    }catch(e){console.error(e);showToast("Failed to create ticket","error");}
+    setLoading(false);
+  };
+
+  return(
+    <Modal title="🎫 New Cleaning Ticket" onClose={onClose} wide>
+      <div className="form-grid">
+        <Field l="Client Name *"><input className="field-input" value={form.clientName} onChange={e=>setForm({...form,clientName:e.target.value})} placeholder="Full name"/></Field>
+        <Field l="Phone *"><input className="field-input" value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})} placeholder="e.g. 0821234567"/></Field>
+        <Field l="Email"><input className="field-input" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="email@example.com"/></Field>
+        <Field l="Company"><input className="field-input" value={form.company} onChange={e=>setForm({...form,company:e.target.value})} placeholder="Company name"/></Field>
+        <Field l="Property Type"><select className="field-input" value={form.propertyType} onChange={e=>setForm({...form,propertyType:e.target.value})}><option value="">— Select —</option>{PROPERTY_TYPES.map(t=><option key={t}>{t}</option>)}</select></Field>
+        <Field l="Service *"><select className="field-input" value={form.serviceType} onChange={e=>setForm({...form,serviceType:e.target.value})}><option value="">— Select —</option>{SERVICES.map(s=><option key={s.id} value={s.id}>{s.icon} {s.label}</option>)}</select></Field>
+        <Field l="Priority"><select className="field-input" value={form.priority} onChange={e=>setForm({...form,priority:e.target.value})}>{PRIORITIES.map(p=><option key={p}>{p}</option>)}</select></Field>
+        <Field l="Requested Date"><input type="date" className="field-input" value={form.requestedDate} onChange={e=>setForm({...form,requestedDate:e.target.value})}/></Field>
+        <Field l="Address" span><textarea className="field-input" value={form.address} onChange={e=>setForm({...form,address:e.target.value})} placeholder="Property address" rows={2}/></Field>
+      </div>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:16}}>
+        <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+        <button className="btn btn-primary" onClick={save} disabled={loading}>{loading?"Creating…":"Create Ticket"}</button>
+      </div>
+    </Modal>
+  );
+}
+
+/* ── TICKETS PAGE ── */
+function TicketsPage({tickets, quotes, jobs, invoices, inspections, signoffs, cfg, setPage, setSel, showToast, selTicket, staffList}){
+  const [filterStage,setFilterStage]=useState("");
+  const [filterService,setFilterService]=useState("");
+  const [search,setSearch]=useState("");
+  const [showNewModal,setShowNewModal]=useState(false);
+  const [selectedRef,setSelectedRef]=useState(selTicket||null);
+
+  const filtered=tickets.filter(t=>{
+    if(filterStage && t.status!==filterStage)return false;
+    if(filterService && t.serviceType!==filterService)return false;
+    if(search && !t.ref.toLowerCase().includes(search.toLowerCase()) && !(t.clientName||"").toLowerCase().includes(search.toLowerCase()))return false;
+    return true;
+  });
+
+  const selectedTicket=selectedRef?tickets.find(t=>t.ref===selectedRef):null;
+  if(selectedTicket){
+    return(
+      <TicketDetail ticket={selectedTicket} tickets={tickets} quotes={quotes} jobs={jobs} invoices={invoices} inspections={inspections} signoffs={signoffs} cfg={cfg} onBack={()=>setSelectedRef(null)} showToast={showToast} setPage={setPage} setSel={setSel} staffList={staffList}/>
+    );
+  }
+
+  return(
+    <div className="page-content">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+          <div className="searchbar" style={{width:220}}><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search tickets…"/></div>
+          <select className="field-input" style={{width:140,padding:"8px 10px"}} value={filterStage} onChange={e=>setFilterStage(e.target.value)}><option value="">All Stages</option>{STAGES.map(s=><option key={s.k} value={s.k}>{s.l}</option>)}</select>
+          <select className="field-input" style={{width:150,padding:"8px 10px"}} value={filterService} onChange={e=>setFilterService(e.target.value)}><option value="">All Services</option>{SERVICES.map(s=><option key={s.id} value={s.id}>{s.icon} {s.label}</option>)}</select>
+        </div>
+        <button className="btn btn-primary" onClick={()=>setShowNewModal(true)}>+ New Ticket</button>
+      </div>
+
+      <div className="stage-stepper" style={{marginBottom:16}}>
+        <button className={`stage-pill${!filterStage?" active":""}`} style={{borderColor:!filterStage?AC:"var(--border)"}} onClick={()=>setFilterStage("")}>All</button>
+        {STAGES.map(s=>(<button key={s.k} className={`stage-pill${filterStage===s.k?" active":""}`} style={{borderColor:filterStage===s.k?AC:"var(--border)"}} onClick={()=>setFilterStage(s.k)}><span className="sp-dot" style={{background:s.c}}/>{s.l}</button>))}
+      </div>
+
+      <div className="card">
+        <div style={{overflowX:"auto"}}>
+          <table className="tbl">
+            <thead><tr><th>Ref</th><th>Customer</th><th>Service</th><th>Property</th><th>Priority</th><th>Status</th><th>Created</th></tr></thead>
+            <tbody>
+              {filtered.length===0?<tr><td colSpan="7" style={{textAlign:"center",padding:32,color:"var(--text4)"}}>No tickets found.</td></tr>:
+                filtered.map(t=>(<tr key={t.ref} style={{cursor:"pointer"}} onClick={()=>setSelectedRef(t.ref)}>
+                  <td className="mono" style={{color:AC}}>{t.ref}</td>
+                  <td>{t.clientName||"—"}</td>
+                  <td style={{fontSize:12}}>{SERVICES.find(s=>s.id===t.serviceType)?.label||t.serviceType||"—"}</td>
+                  <td style={{fontSize:12}}>{t.propertyType||"—"}</td>
+                  <td><span className="badge" style={{background:t.priority==="Urgent"?"rgba(239,68,68,0.15)":"rgba(0,200,150,0.08)",color:t.priority==="Urgent"?"#EF4444":AC}}>{t.priority||"Normal"}</span></td>
+                  <td><StagePill s={t.status}/></td>
+                  <td style={{fontSize:11,color:"var(--text4)"}}>{t.createdAt?new Date(t.createdAt).toLocaleDateString("en-ZA"):"—"}</td>
+                </tr>))
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {showNewModal&&<NewTicketModal onClose={()=>setShowNewModal(false)} onSaved={(doc)=>{setSelectedRef(doc.ref);}} cfg={cfg} showToast={showToast}/>}
+    </div>
+  );
+}
+
+/* ── CUSTOMERS PAGE ── */
+function CustomersPage({tickets, cfg, showToast}){
+  const [search,setSearch]=useState("");
+  const customers=useMemo(()=>{
+    const map={};
+    tickets.forEach(t=>{
+      const key=t.phone||t.clientName;
+      if(!key)return;
+      if(!map[key])map[key]={name:t.clientName,phone:t.phone,email:t.email,company:t.company,address:t.address,propertyType:t.propertyType,tickets:[]};
+      map[key].tickets.push(t.ref);
+    });
+    return Object.values(map);
+  },[tickets]);
+
+  const filtered=customers.filter(c=>(c.name||"").toLowerCase().includes(search.toLowerCase()) || (c.phone||"").includes(search));
+
+  return(
+    <div className="page-content">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <div className="searchbar" style={{width:300}}><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search customers…"/></div>
+        <div style={{fontSize:13,color:"var(--text3)"}}>{filtered.length} customers</div>
+      </div>
+      <div className="card">
+        <div style={{overflowX:"auto"}}>
+          <table className="tbl">
+            <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Company</th><th>Tickets</th><th>Property Type</th></tr></thead>
+            <tbody>
+              {filtered.length===0?<tr><td colSpan="6" style={{textAlign:"center",padding:32,color:"var(--text4)"}}>No customers found.</td></tr>:
+                filtered.map((c,i)=>(<tr key={i}><td style={{fontWeight:600,color:"var(--text)"}}>{c.name||"—"}</td><td>{c.phone||"—"}</td><td>{c.email||"—"}</td><td>{c.company||"—"}</td><td><span className="badge" style={{background:"rgba(0,200,150,0.08)",color:AC}}>{c.tickets.length}</span></td><td style={{fontSize:12}}>{c.propertyType||"—"}</td></tr>))
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── QUOTATIONS PAGE ── */
+function QuotationsPage({quotes, tickets, cfg, showToast, setPage}){
+  const [filterStatus,setFilterStatus]=useState("");
+  const [search,setSearch]=useState("");
+  const filtered=quotes.filter(q=>{
+    if(filterStatus && q.status!==filterStatus)return false;
+    if(search && !q.id.toLowerCase().includes(search.toLowerCase()) && !(q.clientName||"").toLowerCase().includes(search.toLowerCase()))return false;
+    return true;
+  });
+  const openTicket=(ref)=>{setPage("tickets");};
+
+  return(
+    <div className="page-content">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+          <div className="searchbar" style={{width:220}}><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search quotes…"/></div>
+          <select className="field-input" style={{width:140,padding:"8px 10px"}} value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}><option value="">All Status</option>{QUOTE_STATUSES.map(s=><option key={s.k} value={s.k}>{s.l}</option>)}</select>
+        </div>
+        <span style={{fontSize:13,color:"var(--text3)"}}>{filtered.length} quotations</span>
+      </div>
+      <div className="card">
+        <div style={{overflowX:"auto"}}>
+          <table className="tbl">
+            <thead><tr><th>Ref</th><th>Client</th><th>Ticket</th><th>Total</th><th>Status</th><th>Created</th><th></th></tr></thead>
+            <tbody>
+              {filtered.length===0?<tr><td colSpan="7" style={{textAlign:"center",padding:32,color:"var(--text4)"}}>No quotations found.</td></tr>:
+                filtered.map(q=>(<tr key={q.id}>
+                  <td className="mono" style={{color:AC}}>{q.id}</td>
+                  <td>{q.clientName||"—"}</td>
+                  <td className="mono" style={{cursor:"pointer",color:"var(--text2)"}} onClick={()=>openTicket(q.ticketRef)}>{q.ticketRef||"—"}</td>
+                  <td style={{fontWeight:600}}>R {Number(q.total||0).toFixed(2)}</td>
+                  <td><QuoteStatusPill s={q.status}/></td>
+                  <td style={{fontSize:11,color:"var(--text4)"}}>{q.createdAt?new Date(q.createdAt).toLocaleDateString("en-ZA"):"—"}</td>
+                  <td><button className="btn btn-pdf btn-xs" onClick={()=>openPrintWindow(buildQuotePdfHtml(q,cfg))}>🖨️</button></td>
+                </tr>))
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── ACTIVE JOBS PAGE ── */
+function ActiveJobsPage({jobs, tickets, cfg, showToast}){
+  const [filterTeam,setFilterTeam]=useState("");
+  const [search,setSearch]=useState("");
+
+  const filtered=jobs.filter(j=>{
+    if(j.status==="completed"||j.status==="closed")return false;
+    if(filterTeam && j.team!==filterTeam)return false;
+    if(search && !j.ticketRef.toLowerCase().includes(search.toLowerCase()))return false;
+    return true;
+  });
+
+  const updateJobStatus = async (jobId, status) => {
+    try {
+      await col("jobs").doc(jobId).update({status, updatedAt: ts()});
+      const job = jobs.find(j => j.id === jobId);
+      if (job && status === "completed") {
+        await fsUpdate("tickets", job.ticketRef, { status: "completed" });
+        await addNoteToTicket(job.ticketRef, "✅ Job completed - ready for client sign-off", "stage", "Office");
+      }
+      showToast(`Job ${status}`);
+    } catch(e) {
+      showToast("Failed to update job", "error");
+    }
+  };
+
+  return(
+    <div className="page-content">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+          <div className="searchbar" style={{width:220}}><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search jobs…"/></div>
+          <select className="field-input" style={{width:140,padding:"8px 10px"}} value={filterTeam} onChange={e=>setFilterTeam(e.target.value)}><option value="">All Teams</option>{cfg.teams.map(t=><option key={t}>{t}</option>)}</select>
+        </div>
+        <span style={{fontSize:13,color:"var(--text3)"}}>{filtered.length} active</span>
+      </div>
+      <div className="card">
+        <div style={{overflowX:"auto"}}>
+          <table className="tbl">
+            <thead><tr><th>Ticket</th><th>Client</th><th>Date</th><th>Team</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              {filtered.length===0?<tr><td colSpan="6" style={{textAlign:"center",padding:32,color:"var(--text4)"}}>No active jobs.</td></tr>:
+                filtered.map(j=>{
+                  const t=tickets.find(tk=>tk.ref===j.ticketRef);
+                  return(<tr key={j.id}>
+                    <td className="mono" style={{color:AC}}>{j.ticketRef}</td>
+                    <td>{t?.clientName||"—"}</td>
+                    <td>{j.scheduledDate} {j.scheduledTime||""}</td>
+                    <td>{j.team||"Unassigned"}</td>
+                    <td><StagePill s={j.status}/></td>
+                    <td style={{display:"flex",gap:4}}>
+                      {j.status==="scheduled"&&<button className="btn btn-primary btn-xs" onClick={()=>updateJobStatus(j.id,"in-progress")}>Start</button>}
+                      {j.status==="in-progress"&&<button className="btn btn-primary btn-xs" onClick={()=>updateJobStatus(j.id,"completed")}>Complete</button>}
+                    </td>
+                  </tr>);
+                })
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── STAFF MANAGEMENT PAGE ── */
+function StaffManagementPage({cfg, showToast, staffList, setStaffList}){
+  const [showAdd,setShowAdd]=useState(false);
+  const [editingStaff,setEditingStaff]=useState(null);
+  const [newStaff,setNewStaff]=useState({name:"",role:"Cleaner",phone:"",email:"",team:""});
+  const [staff,setStaff] = useState(staffList || []);
+
+  useEffect(()=>{
+    const unsub = col("staff").onSnapshot(snap=>{
+      const data = snap.docs.map(d=>({id:d.id,...d.data()}));
+      setStaff(data);
+      setStaffList && setStaffList(data);
+    });
+    return ()=>unsub();
+  },[]);
+
+  const addStaff=async()=>{
+    if(!newStaff.name.trim()){showToast("Name required","error");return;}
+    await col("staff").add({...newStaff,createdAt:ts()});
+    setNewStaff({name:"",role:"Cleaner",phone:"",email:"",team:""});
+    setShowAdd(false);
+    showToast("Staff added ✓");
+  };
+
+  const updateStaff=async(id, data)=>{
+    await col("staff").doc(id).update(data);
+    showToast("Staff updated ✓");
+    setEditingStaff(null);
+  };
+
+  const deleteStaff=async(id)=>{
+    if(window.confirm("Delete this staff member?")){
+      await col("staff").doc(id).delete();
+      showToast("Staff deleted ✓");
+    }
+  };
+
+  return(
+    <div className="page-content">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <span style={{fontSize:13,color:"var(--text3)"}}>{staff.length} team members</span>
+        <button className="btn btn-primary" onClick={()=>setShowAdd(true)}>+ Add Staff</button>
+      </div>
+      <div className="card">
+        <div style={{overflowX:"auto"}}>
+          <table className="tbl">
+            <thead><tr><th>Name</th><th>Role</th><th>Phone</th><th>Email</th><th>Team</th><th>Actions</th></tr></thead>
+            <tbody>
+              {staff.length===0?<tr><td colSpan="6" style={{textAlign:"center",padding:32,color:"var(--text4)"}}>No staff members.</td></tr>:
+                staff.map(s=>(
+                  <tr key={s.id}>
+                    {editingStaff === s.id ? (
+                      <>
+                        <td><input className="field-input" defaultValue={s.name} onBlur={e=>updateStaff(s.id,{name:e.target.value})} placeholder="Name"/></td>
+                        <td><select className="field-input" defaultValue={s.role} onChange={e=>updateStaff(s.id,{role:e.target.value})}>{STAFF_ROLES.map(r=><option key={r}>{r}</option>)}</select></td>
+                        <td><input className="field-input" defaultValue={s.phone||""} onBlur={e=>updateStaff(s.id,{phone:e.target.value})} placeholder="Phone"/></td>
+                        <td><input className="field-input" defaultValue={s.email||""} onBlur={e=>updateStaff(s.id,{email:e.target.value})} placeholder="Email"/></td>
+                        <td><select className="field-input" defaultValue={s.team||""} onChange={e=>updateStaff(s.id,{team:e.target.value})}><option value="">Unassigned</option>{cfg.teams.map(t=><option key={t}>{t}</option>)}</select></td>
+                        <td><button className="btn btn-secondary btn-xs" onClick={()=>setEditingStaff(null)}>Done</button></td>
+                      </>
+                    ) : (
+                      <>
+                        <td style={{fontWeight:600,color:"var(--text)"}}>{s.name}</td>
+                        <td><span className="badge" style={{background:"rgba(139,92,246,0.15)",color:"#8B5CF6"}}>{s.role}</span></td>
+                        <td>{s.phone||"—"}</td>
+                        <td>{s.email||"—"}</td>
+                        <td>{s.team||"Unassigned"}</td>
+                        <td style={{display:"flex",gap:4}}>
+                          <button className="btn btn-secondary btn-xs" onClick={()=>setEditingStaff(s.id)}>✏️</button>
+                          <button className="btn btn-danger btn-xs" onClick={()=>deleteStaff(s.id)}>🗑️</button>
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                ))
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {showAdd&&(
+        <Modal title="Add Staff Member" onClose={()=>setShowAdd(false)}>
+          <div className="form-grid">
+            <Field l="Name *"><input className="field-input" value={newStaff.name} onChange={e=>setNewStaff({...newStaff,name:e.target.value})}/></Field>
+            <Field l="Role"><select className="field-input" value={newStaff.role} onChange={e=>setNewStaff({...newStaff,role:e.target.value})}>{STAFF_ROLES.map(r=><option key={r}>{r}</option>)}</select></Field>
+            <Field l="Phone"><input className="field-input" value={newStaff.phone} onChange={e=>setNewStaff({...newStaff,phone:e.target.value})}/></Field>
+            <Field l="Email"><input className="field-input" value={newStaff.email} onChange={e=>setNewStaff({...newStaff,email:e.target.value})}/></Field>
+            <Field l="Team" span><select className="field-input" value={newStaff.team} onChange={e=>setNewStaff({...newStaff,team:e.target.value})}><option value="">Unassigned</option>{cfg.teams.map(t=><option key={t}>{t}</option>)}</select></Field>
+          </div>
+          <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:16}}>
+            <button className="btn btn-secondary" onClick={()=>setShowAdd(false)}>Cancel</button>
+            <button className="btn btn-primary" onClick={addStaff}>Add</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/* ── WHATSAPP CENTER PAGE ── */
+function WhatsAppCenterPage({tickets, cfg, showToast, staffList}){
+  const [selectedRef,setSelectedRef]=useState("");
+  const [logs,setLogs]=useState([]);
+  useEffect(()=>{col("whatsapp_logs").orderBy("sentAt","desc").limit(50).onSnapshot(snap=>{setLogs(snap.docs.map(d=>({id:d.id,...d.data()})));});},[]);
+  const ticket=tickets.find(t=>t.ref===selectedRef);
+
+  return(
+    <div className="page-content">
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+        <div className="card">
+          <div className="card-header"><div className="card-title">💬 Send WhatsApp</div></div>
+          <div className="card-body">
+            <Field l="Select Ticket"><select className="field-input" value={selectedRef} onChange={e=>setSelectedRef(e.target.value)}><option value="">— Select —</option>{tickets.filter(t=>t.phone).map(t=><option key={t.ref} value={t.ref}>{t.ref} — {t.clientName}</option>)}</select></Field>
+            {ticket&&<WhatsAppPanel ticket={ticket} cfg={cfg} onLogged={()=>showToast("WhatsApp sent ✓")} staffList={staffList}/>}
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-header"><div className="card-title">📋 Recent Logs</div></div>
+          <div className="card-body" style={{maxHeight:400,overflowY:"auto"}}>
+            {logs.length===0?<div style={{textAlign:"center",color:"var(--text4)",fontSize:13,padding:12}}>No logs yet.</div>:
+              logs.map(l=>(<div key={l.id} className="note-item"><div className="note-text">📤 {l.template} → {l.phone}</div><div className="note-meta">{l.ticketRef} · {l.sentAt?new Date(l.sentAt).toLocaleString("en-ZA"):""}</div></div>))
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── SITE INSPECTIONS PAGE ── */
+function SiteInspectionsPage({inspections, tickets, cfg, showToast}){
+  const [showForm,setShowForm]=useState(false);
+  const [selectedTicket,setSelectedTicket]=useState(null);
+
+  return(
+    <div className="page-content">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <span style={{fontSize:13,color:"var(--text3)"}}>{inspections.length} inspections</span>
+        <button className="btn btn-primary" onClick={()=>{const available=tickets.find(t=>t.status==="site-inspection"||t.status==="scheduled"); if(available) setSelectedTicket(available); setShowForm(true);}}>📸 New Inspection</button>
+      </div>
+      {showForm&&selectedTicket&&<SiteInspectionForm ticket={selectedTicket} onClose={()=>{setShowForm(false);setSelectedTicket(null);}} onSave={()=>{setShowForm(false);}} showToast={showToast}/>}
+      <div className="card">
+        <div style={{overflowX:"auto"}}>
+          <table className="tbl">
+            <thead><tr><th>Ticket</th><th>Inspector</th><th>Date</th><th>Passed</th><th>Status</th></tr></thead>
+            <tbody>
+              {inspections.length===0?<tr><td colSpan="5" style={{textAlign:"center",padding:32,color:"var(--text4)"}}>No inspections.</td></tr>:
+                inspections.map(i=>{const t=tickets.find(tk=>tk.ref===i.ticketRef); return(<tr key={i.id}><td className="mono" style={{color:AC}}>{i.ticketRef}</td><td>{i.inspector||"—"}</td><td>{i.createdAt?new Date(i.createdAt).toLocaleDateString("en-ZA"):"—"}</td><td>{i.passed||0}/{i.total||0}</td><td><StagePill s={i.status||"scheduled"}/></td></tr>);})
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── CLIENT SIGN-OFFS PAGE ── */
+function ClientSignOffsPage({signoffs, tickets, cfg, showToast, setPage}){
+  const [showModal,setShowModal]=useState(false);
+
+  return(
+    <div className="page-content">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <span style={{fontSize:13,color:"var(--text3)"}}>{signoffs.length} sign-offs</span>
+        <button className="btn btn-primary" onClick={()=>{const completed=tickets.filter(t=>(t.status==="completed"||t.status==="invoiced"||t.status==="paid")&&t.status!=="closed"); if(completed.length===0){showToast("No completed tickets ready for sign-off","error");return;} setShowModal(true);}}>✅ New Sign-Off</button>
+      </div>
+      {showModal&&<ClientSignOffModal tickets={tickets} onClose={()=>setShowModal(false)} onSave={()=>setShowModal(false)} showToast={showToast}/>}
+      <div className="card">
+        <div style={{overflowX:"auto"}}>
+          <table className="tbl">
+            <thead><tr><th>Ticket</th><th>Client</th><th>Rating</th><th>Feedback</th><th>Status</th></tr></thead>
+            <tbody>
+              {signoffs.length===0?<tr><td colSpan="5" style={{textAlign:"center",padding:32,color:"var(--text4)"}}>No sign-offs yet.</td></tr>:
+                signoffs.map(s=>{const t=tickets.find(tk=>tk.ref===s.ticketRef); return(<tr key={s.id}><td className="mono" style={{color:AC}}>{s.ticketRef}</td><td>{t?.clientName||"—"}</td><td>{'★'.repeat(s.rating||0)}{'☆'.repeat(5-(s.rating||0))}</td><td style={{maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.feedback||"—"}</td><td><span className="badge" style={{background:"rgba(16,185,129,0.15)",color:"#10B981"}}>✅ Signed</span></td></tr>);})
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── INVOICES PAGE ── */
+function InvoicesPage({invoices, tickets, cfg, showToast, setPage}){
+  const [filterStatus,setFilterStatus]=useState("");
+  const [search,setSearch]=useState("");
+  const filtered=invoices.filter(i=>{
+    if(filterStatus && i.status!==filterStatus)return false;
+    if(search && !i.id.toLowerCase().includes(search.toLowerCase()) && !(i.clientName||"").toLowerCase().includes(search.toLowerCase()))return false;
+    return true;
+  });
+  const openTicket=(ref)=>{setPage("tickets");};
+
+  return(
+    <div className="page-content">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+          <div className="searchbar" style={{width:220}}><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search invoices…"/></div>
+          <select className="field-input" style={{width:140,padding:"8px 10px"}} value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}><option value="">All Status</option>{INV_STATUSES.map(s=><option key={s.k} value={s.k}>{s.l}</option>)}</select>
+        </div>
+        <span style={{fontSize:13,color:"var(--text3)"}}>{filtered.length} invoices</span>
+      </div>
+      <div className="card">
+        <div style={{overflowX:"auto"}}>
+          <table className="tbl">
+            <thead><tr><th>Ref</th><th>Client</th><th>Ticket</th><th>Total</th><th>Paid</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              {filtered.length===0?<tr><td colSpan="7" style={{textAlign:"center",padding:32,color:"var(--text4)"}}>No invoices found.</td></tr>:
+                filtered.map(i=>(<tr key={i.id}><td className="mono" style={{color:AC}}>{i.id}</td><td>{i.clientName||"—"}</td><td className="mono" style={{cursor:"pointer",color:"var(--text2)"}} onClick={()=>openTicket(i.ticketRef)}>{i.ticketRef||"—"}</td><td style={{fontWeight:600}}>R {Number(i.total||0).toFixed(2)}</td><td>R {Number(i.amountPaid||0).toFixed(2)}</td><td><InvStatusPill s={i.status}/></td><td><button className="btn btn-pdf btn-xs" onClick={()=>openPrintWindow(buildInvoicePdfHtml(i,cfg))}>🖨️</button></td></tr>))
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── REPORTS PAGE ── */
+function ReportsPage({invoices, jobs, tickets, cfg}){
+  const totalRevenue=invoices.reduce((sum,i)=>sum+Number(i.amountPaid||0),0);
+  const totalInvoiced=invoices.reduce((sum,i)=>sum+Number(i.total||0),0);
+  const completionRate=tickets.length?Math.round(tickets.filter(t=>t.status==="completed"||t.status==="closed").length/tickets.length*100):0;
+  const monthlyData=useMemo(()=>{
+    const data={};
+    invoices.forEach(i=>{
+      const month=i.createdAt?new Date(i.createdAt).toLocaleString("en-ZA",{month:"short",year:"numeric"}):"Unknown";
+      if(!data[month])data[month]={invoiced:0,paid:0};
+      data[month].invoiced+=Number(i.total||0);
+      data[month].paid+=Number(i.amountPaid||0);
+    });
+    return Object.entries(data).sort((a,b)=>new Date(a[0])-new Date(b[0]));
+  },[invoices]);
+
+  return(
+    <div className="page-content">
+      <div className="stats-row">
+        <div className="stat-card"><div className="stat-val" style={{color:"#22C55E"}}>R {totalRevenue.toFixed(2)}</div><div className="stat-lbl">Total Revenue</div></div>
+        <div className="stat-card"><div className="stat-val" style={{color:"#0EA5E9"}}>R {totalInvoiced.toFixed(2)}</div><div className="stat-lbl">Total Invoiced</div></div>
+        <div className="stat-card"><div className="stat-val" style={{color:"#8B5CF6"}}>{completionRate}%</div><div className="stat-lbl">Completion Rate</div></div>
+        <div className="stat-card"><div className="stat-val" style={{color:"#F59E0B"}}>{invoices.filter(i=>i.status!=="paid").length}</div><div className="stat-lbl">Outstanding</div></div>
+      </div>
+      <div className="card">
+        <div className="card-header"><div className="card-title">📊 Monthly Revenue</div></div>
+        <div className="card-body">
+          {monthlyData.length===0?<div style={{textAlign:"center",color:"var(--text4)",padding:20}}>No data yet.</div>:
+            <table className="tbl"><thead><tr><th>Month</th><th>Invoiced</th><th>Paid</th><th>% Collected</th></tr></thead><tbody>{monthlyData.map(([month,data])=>(<tr key={month}><td>{month}</td><td>R {data.invoiced.toFixed(2)}</td><td style={{color:"#22C55E"}}>R {data.paid.toFixed(2)}</td><td>{data.invoiced?Math.round(data.paid/data.invoiced*100):0}%</td></tr>))}</tbody></table>
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── SETTINGS PAGE ── */
+function SettingsPage({cfg, setCfg, showToast}){
+  const [localCfg,setLocalCfg]=useState(cfg);
+
+  const saveSettings=async()=>{
+    await col("settings").doc("config").set(localCfg,{merge:true});
+    setCfg(localCfg);
+    showToast("Settings saved ✓");
+  };
+
+  return(
+    <div className="page-content">
+      <div className="card">
+        <div className="card-header"><div className="card-title">⚙️ Settings</div></div>
+        <div className="card-body">
+          <div className="form-grid">
+            <Field l="Business Name"><input className="field-input" value={localCfg.bizName} onChange={e=>setLocalCfg({...localCfg,bizName:e.target.value})}/></Field>
+            <Field l="Short Name"><input className="field-input" value={localCfg.shortName} onChange={e=>setLocalCfg({...localCfg,shortName:e.target.value})}/></Field>
+            <Field l="WhatsApp Number"><input className="field-input" value={localCfg.wa} onChange={e=>setLocalCfg({...localCfg,wa:e.target.value})}/></Field>
+            <Field l="Email"><input className="field-input" value={localCfg.email} onChange={e=>setLocalCfg({...localCfg,email:e.target.value})}/></Field>
+            <Field l="VAT Rate (%)"><input className="field-input" type="number" value={localCfg.vatRate} onChange={e=>setLocalCfg({...localCfg,vatRate:Number(e.target.value)})}/></Field>
+            <Field l="Admin Password"><input className="field-input" type="password" value={localCfg.adminPw} onChange={e=>setLocalCfg({...localCfg,adminPw:e.target.value})}/></Field>
+            <Field l="Teams (comma separated)" span><input className="field-input" value={localCfg.teams.join(", ")} onChange={e=>setLocalCfg({...localCfg,teams:e.target.value.split(",").map(s=>s.trim()).filter(Boolean)})}/></Field>
+            <Field l="Google Review URL" span><input className="field-input" value={localCfg.googleReview} onChange={e=>setLocalCfg({...localCfg,googleReview:e.target.value})}/></Field>
+            <Field l="Zoho Portal URL" span><input className="field-input" value={localCfg.zoho} onChange={e=>setLocalCfg({...localCfg,zoho:e.target.value})}/></Field>
+          </div>
+          <div style={{display:"flex",justifyContent:"flex-end",marginTop:16}}>
+            <button className="btn btn-primary" onClick={saveSettings}>💾 Save Settings</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   ROOT APP
+════════════════════════════════════════════════════ */
+function App(){
+  const [auth,setAuth]=useState(false);
+  const [page,setPage]=useState("dashboard");
+  const [selTicket,setSelTicket]=useState(null);
+  const [theme,setTheme]=useState(localStorage.getItem("mgfc-theme")||"dark");
+  const [cfg,setCfg]=useState(DEFAULT_CFG);
+  const [loading,setLoading]=useState(true);
+  const [toast,setToast]=useState({msg:"",type:"ok"});
+  const [staffList,setStaffList]=useState([]);
+
+  const [tickets,setTickets]=useState([]);
+  const [customers,setCustomers]=useState([]);
+  const [quotes,setQuotes]=useState([]);
+  const [jobs,setJobs]=useState([]);
+  const [invoices,setInvoices]=useState([]);
+  const [inspections,setInspections]=useState([]);
+  const [signoffs,setSignoffs]=useState([]);
+
+  useEffect(()=>{
+    document.body.className=theme;
+    localStorage.setItem("mgfc-theme",theme);
+  },[theme]);
+
+  useEffect(()=>{
+    col("settings").doc("config").get().then(snap=>{
+      if(snap.exists)setCfg({...DEFAULT_CFG,...snap.data()});
+      setLoading(false);
+    }).catch(()=>setLoading(false));
+
+    const unsubs=[
+      col("tickets").orderBy("createdAt","desc").onSnapshot(snap=>setTickets(snap.docs.map(d=>({...d.data(),id:d.id})))),
+      col("customers").onSnapshot(snap=>setCustomers(snap.docs.map(d=>({id:d.id,...d.data()})))),
+      col("quotes").orderBy("createdAt","desc").onSnapshot(snap=>setQuotes(snap.docs.map(d=>({...d.data(),id:d.id})))),
+      col("jobs").orderBy("createdAt","desc").onSnapshot(snap=>setJobs(snap.docs.map(d=>({id:d.id,...d.data()})))),
+      col("invoices").orderBy("createdAt","desc").onSnapshot(snap=>setInvoices(snap.docs.map(d=>({id:d.id,...d.data()})))),
+      col("inspections").orderBy("createdAt","desc").onSnapshot(snap=>setInspections(snap.docs.map(d=>({id:d.id,...d.data()})))),
+      col("signoffs").orderBy("createdAt","desc").onSnapshot(snap=>setSignoffs(snap.docs.map(d=>({id:d.id,...d.data()})))),
+      col("staff").onSnapshot(snap=>setStaffList(snap.docs.map(d=>({id:d.id,...d.data()})))),
+    ];
+    return()=>unsubs.forEach(u=>u());
+  },[]);
+
+  const showToast=(msg,type="ok")=>{setToast({msg,type});setTimeout(()=>setToast({msg:"",type:"ok"}),3000);};
+
+  const counts={
+    pendingApproval: tickets.filter(t=>t.status==="awaiting-approval").length,
+    activeJobs: jobs.filter(j=>j.status==="in-progress"||j.status==="scheduled").length,
+    overdueInvoices: invoices.filter(i=>i.status!=="paid"&&i.dueDate&&new Date(i.dueDate)<new Date()).length,
+  };
+
+  if(loading)return<Spinner/>;
+  if(!auth)return<Login cfg={cfg} onAuth={()=>setAuth(true)}/>;
+
+  const renderPage=()=>{
+    switch(page){
+      case "dashboard": return <Dashboard tickets={tickets} quotes={quotes} jobs={jobs} invoices={invoices} cfg={cfg} setPage={setPage} setSel={setSelTicket}/>;
+      case "tickets": return <TicketsPage tickets={tickets} quotes={quotes} jobs={jobs} invoices={invoices} inspections={inspections} signoffs={signoffs} cfg={cfg} setPage={setPage} setSel={setSelTicket} showToast={showToast} selTicket={selTicket} staffList={staffList}/>;
+      case "customers": return <CustomersPage tickets={tickets} cfg={cfg} showToast={showToast}/>;
+      case "quotations": return <QuotationsPage quotes={quotes} tickets={tickets} cfg={cfg} showToast={showToast} setPage={setPage}/>;
+      case "scheduling": return <EnhancedScheduling jobs={jobs} tickets={tickets} cfg={cfg} showToast={showToast} setPage={setPage}/>;
+      case "jobs": return <ActiveJobsPage jobs={jobs} tickets={tickets} cfg={cfg} showToast={showToast}/>;
+      case "staff": return <StaffManagementPage cfg={cfg} showToast={showToast} staffList={staffList} setStaffList={setStaffList}/>;
+      case "whatsapp": return <WhatsAppCenterPage tickets={tickets} cfg={cfg} showToast={showToast} staffList={staffList}/>;
+      case "inspections": return <SiteInspectionsPage inspections={inspections} tickets={tickets} cfg={cfg} showToast={showToast}/>;
+      case "signoffs": return <ClientSignOffsPage signoffs={signoffs} tickets={tickets} cfg={cfg} showToast={showToast} setPage={setPage}/>;
+      case "invoices": return <InvoicesPage invoices={invoices} tickets={tickets} cfg={cfg} showToast={showToast} setPage={setPage}/>;
+      case "reports": return <ReportsPage invoices={invoices} jobs={jobs} tickets={tickets} cfg={cfg}/>;
+      case "mobile": return <MobileTeamPortal jobs={jobs} tickets={tickets} cfg={cfg} showToast={showToast}/>;
+      case "settings": return <SettingsPage cfg={cfg} setCfg={setCfg} showToast={showToast}/>;
+      default: return <Dashboard tickets={tickets} quotes={quotes} jobs={jobs} invoices={invoices} cfg={cfg} setPage={setPage} setSel={setSelTicket}/>;
+    }
+  };
+
+  const pageTitles={
+    dashboard:"Dashboard", tickets:"Cleaning Tickets", customers:"Customers", quotations:"Quotations",
+    scheduling:"Scheduling", jobs:"Active Jobs", staff:"Staff Management", whatsapp:"WhatsApp Center",
+    inspections:"Site Inspections", signoffs:"Client Sign-Offs", invoices:"Invoices", reports:"Reports",
+    mobile:"Team Portal", settings:"Settings",
+  };
+
+  return(
+    <div className="app-shell">
+      <Sidebar page={page} setPage={setPage} cfg={cfg} counts={counts} theme={theme} toggleTheme={()=>setTheme(t=>t==="dark"?"light":"dark")}/>
+      <div className="content-area">
+        <TopBar title={pageTitles[page]||"Dashboard"} sub={`${cfg.shortName} · ${cfg.bizName}`}/>
+        {renderPage()}
+      </div>
+      <Toast msg={toast.msg} type={toast.type}/>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
