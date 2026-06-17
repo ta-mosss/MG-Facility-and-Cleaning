@@ -95,8 +95,13 @@
     .status-closed{background:#F3F4F6;color:#6B7280;}
     .refresh-btn{background:transparent;border:none;color:#00C896;font-size:18px;cursor:pointer;padding:4px 8px;}
     .refresh-btn:hover{transform:rotate(90deg);transition:0.3s;}
-    .job-time{font-size:10px;color:#7A8DA0;display:flex;gap:12px;margin-top:2px;}
+    .job-time{font-size:10px;color:#7A8DA0;display:flex;gap:12px;margin-top:2px;flex-wrap:wrap;}
     .job-time span{display:flex;align-items:center;gap:4px;}
+    .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin:6px 0;}
+    .detail-item{font-size:12px;padding:3px 0;}
+    .detail-item .label{color:#7A8DA0;font-weight:500;margin-right:4px;}
+    .detail-item .value{color:#1A2332;font-weight:500;}
+    .service-tag{display:inline-block;background:#E8ECF2;padding:2px 10px;border-radius:12px;font-size:11px;color:#4A5A6E;margin-top:4px;}
     @media (max-width:400px){.stat-grid{grid-template-columns:1fr 1fr;}}
   </style>
 </head>
@@ -182,6 +187,18 @@ function Login({ onLogin }){
   );
 }
 
+const SERVICE_LABELS = {
+  deep: "Deep Cleaning",
+  recurring: "Regular / Recurring Cleaning",
+  postbuild: "Post-Construction Cleaning",
+  carpet: "Carpet & Upholstery Cleaning",
+  window: "Window Cleaning",
+  office: "Office Cleaning Contract",
+  movein: "Move In / Move Out Cleaning",
+  sanitize: "Sanitization & Disinfection",
+  other: "Other"
+};
+
 function SmartInspectionApp(){
   const [team, setTeam] = useState(null);
   const [allJobs, setAllJobs] = useState([]);
@@ -230,16 +247,13 @@ function SmartInspectionApp(){
     return () => unsub();
   }, []);
 
-  // Fetch ONLY active jobs (scheduled and in-progress) - hide completed/closed
+  // Fetch ONLY active jobs (scheduled and in-progress)
   useEffect(() => {
     if(!team) {
       setLoading(false);
       return;
     }
     
-    console.log(`🔍 Fetching ACTIVE jobs for team: ${team} from mgfc_jobs`);
-    
-    // Only get jobs that are NOT completed or closed
     const unsub = col("jobs")
       .where("team", "==", team)
       .onSnapshot(snap => {
@@ -247,26 +261,18 @@ function SmartInspectionApp(){
           id: d.id, 
           ...d.data() 
         }));
-        
-        // Filter to ONLY active jobs (scheduled or in-progress)
         const activeJobs = allData.filter(j => 
           j.status === "scheduled" || 
           j.status === "in-progress"
         );
-        
-        console.log(`📋 Found ${allData.length} total, ${activeJobs.length} active jobs for ${team}`);
         setAllJobs(activeJobs);
-        
-        // Find the active job the team is currently working on
         const current = activeJobs.find(j => j.status === "in-progress");
         if(current) {
           setActiveJob(current);
         } else {
-          // If no in-progress, show the first scheduled job as the active card
           const firstScheduled = activeJobs.find(j => j.status === "scheduled");
           setActiveJob(firstScheduled || null);
         }
-        
         setLoading(false);
       }, error => {
         console.error("Jobs fetch error:", error);
@@ -324,7 +330,7 @@ function SmartInspectionApp(){
     showToast("🔄 Refreshing...", "success");
   };
 
-  // Check In - records timestamp
+  // Check In
   const handleCheckIn = async () => {
     if(!activeJob){ showToast("No active job assigned", "error"); return; }
     const loc = await getLocation();
@@ -345,7 +351,7 @@ function SmartInspectionApp(){
     showToast(`✅ Checked in at ${new Date().toLocaleTimeString()}`);
   };
 
-  // Check Out - records timestamp
+  // Check Out
   const handleCheckOut = async () => {
     if(!activeJob){ showToast("No active job", "error"); return; }
     const loc = await getLocation();
@@ -362,10 +368,8 @@ function SmartInspectionApp(){
     await col("checkins").add(checkoutData);
     await col("jobs").doc(activeJob.id).update({ status: "completed", completedAt: ts() });
     setActiveJob({ ...activeJob, status: "completed", completedAt: ts() });
-    // Remove from active jobs list since it's now completed
     setAllJobs(allJobs.filter(j => j.id !== activeJob.id));
     showToast(`✅ Checked out at ${new Date().toLocaleTimeString()}`);
-    // Auto trigger sign-off
     setSelectedJobForSignoff(activeJob);
     setShowSignoff(true);
   };
@@ -457,6 +461,31 @@ function SmartInspectionApp(){
     e.target.value = "";
   };
 
+  // Render ticket details helper
+  const renderTicketDetails = (ticket) => {
+    if(!ticket) return null;
+    const serviceLabel = SERVICE_LABELS[ticket.serviceType] || ticket.serviceType || "—";
+    return (
+      <div className="detail-grid">
+        <div className="detail-item"><span className="label">Client:</span><span className="value">{ticket.clientName || "—"}</span></div>
+        <div className="detail-item"><span className="label">Phone:</span><span className="value">{ticket.phone || "—"}</span></div>
+        <div className="detail-item"><span className="label">Email:</span><span className="value">{ticket.email || "—"}</span></div>
+        <div className="detail-item"><span className="label">Service:</span><span className="value">{serviceLabel}</span></div>
+        <div className="detail-item"><span className="label">Property:</span><span className="value">{ticket.propertyType || "—"}</span></div>
+        <div className="detail-item"><span className="label">Priority:</span><span className="value">{ticket.priority || "Normal"}</span></div>
+        <div className="detail-item" style={{gridColumn:"1/-1"}}><span className="label">Address:</span><span className="value">{ticket.address || "—"}</span></div>
+        {ticket.notes && ticket.notes.length > 0 && (
+          <div className="detail-item" style={{gridColumn:"1/-1"}}>
+            <span className="label">Notes:</span>
+            <span className="value" style={{fontWeight:400,fontSize:11}}>
+              {ticket.notes.filter(n => n.type !== "stage").slice(-1).map(n => n.txt).join("; ") || "—"}
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // ─── RENDER ───
   if(!team){
     return <Login onLogin={(t) => { setTeam(t); startTracking(); }} />;
@@ -469,13 +498,16 @@ function SmartInspectionApp(){
       team={team} 
       ticketsMap={ticketsMap}
       showToast={showToast}
+      renderTicketDetails={renderTicketDetails}
     />;
   }
 
-  // Only show active jobs count
   const activeJobCount = allJobs.length;
   const inProgressCount = allJobs.filter(j => j.status === "in-progress").length;
   const scheduledCount = allJobs.filter(j => j.status === "scheduled").length;
+
+  // Get ticket for active job
+  const activeTicket = activeJob ? ticketsMap[activeJob.ticketRef] : null;
 
   return (
     <div className="app" style={{ background: "#FFFFFF" }}>
@@ -502,27 +534,42 @@ function SmartInspectionApp(){
         </span>
       </div>
 
-      {/* Stats - Only show active jobs */}
+      {/* Stats */}
       <div className="stat-grid">
         <div className="stat-box"><div className="stat-num">{activeJobCount}</div><div className="stat-label">Active Jobs</div></div>
         <div className="stat-box"><div className="stat-num" style={{ color: "#F59E0B" }}>{inProgressCount}</div><div className="stat-label">In Progress</div></div>
         <div className="stat-box"><div className="stat-num" style={{ color: "#0EA5E9" }}>{scheduledCount}</div><div className="stat-label">Scheduled</div></div>
       </div>
 
-      {/* Active Job Card */}
+      {/* Active Job Card with FULL Ticket Details */}
       {activeJob && activeJob.status !== "completed" && activeJob.status !== "closed" && (
         <div className="card" style={{ borderColor: "#00C896", borderWidth: 2 }}>
           <div className="card-title">🟢 Current Job</div>
-          <div style={{ fontWeight: 600, fontSize: 16 }}>{activeJob.ticketRef || "No Ref"}</div>
-          <div style={{ fontSize: 13, color: "#4A5A6E", margin: "4px 0" }}>
-            {ticketsMap[activeJob.ticketRef]?.address || activeJob.address || "Address TBD"} · {activeJob.scheduledDate}
-          </div>
-          {/* Show check-in time if in-progress */}
+          <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>{activeJob.ticketRef || "No Ref"}</div>
+          
+          {/* Ticket Details */}
+          {activeTicket ? (
+            <div style={{ marginBottom: 8 }}>
+              {renderTicketDetails(activeTicket)}
+            </div>
+          ) : (
+            <div style={{ fontSize: 13, color: "#7A8DA0", marginBottom: 8 }}>
+              {activeJob.address || "Address TBD"} · {activeJob.scheduledDate}
+            </div>
+          )}
+
+          {/* Check-in/out times */}
           {activeJob.status === "in-progress" && activeJob.startedAt && (
             <div style={{ fontSize: 12, color: "#10B981", margin: "4px 0" }}>
               📥 Checked in: {new Date(activeJob.startedAt).toLocaleTimeString()}
             </div>
           )}
+          {activeJob.status === "completed" && activeJob.completedAt && (
+            <div style={{ fontSize: 12, color: "#10B981", margin: "4px 0" }}>
+              📤 Checked out: {new Date(activeJob.completedAt).toLocaleTimeString()}
+            </div>
+          )}
+
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
             {activeJob.status === "scheduled" && (
               <>
@@ -540,7 +587,7 @@ function SmartInspectionApp(){
         </div>
       )}
 
-      {/* Active Jobs List - Only shows scheduled and in-progress */}
+      {/* Active Jobs List */}
       <div className="card">
         <div className="card-title">
           📋 Active Jobs
@@ -567,6 +614,11 @@ function SmartInspectionApp(){
                   <div style={{ fontSize: 11, color: "#7A8DA0" }}>
                     {ticket?.clientName || j.clientName || "—"} · {ticket?.address || j.address || "—"}
                   </div>
+                  {ticket?.serviceType && (
+                    <div style={{ fontSize: 10, color: "#4A5A6E", marginTop: 2 }}>
+                      {SERVICE_LABELS[ticket.serviceType] || ticket.serviceType}
+                    </div>
+                  )}
                   <div className="job-time">
                     {j.startedAt && (
                       <span>📥 In: {new Date(j.startedAt).toLocaleTimeString()}</span>
@@ -589,7 +641,7 @@ function SmartInspectionApp(){
         )}
       </div>
 
-      {/* Check-in Timeline - Shows history for the team */}
+      {/* Check-in Timeline */}
       <div className="card">
         <div className="card-title">⏱️ Your Check-ins</div>
         {checkins.length === 0 ? (
@@ -721,8 +773,8 @@ function SmartInspectionApp(){
   );
 }
 
-// ─── JOB DETAIL VIEW ───
-function JobDetailView({ job, onBack, team, ticketsMap, showToast }){
+// ─── JOB DETAIL VIEW with full ticket info ───
+function JobDetailView({ job, onBack, team, ticketsMap, showToast, renderTicketDetails }){
   const [assessments, setAssessments] = useState([]);
   const [signoffs, setSignoffs] = useState([]);
 
@@ -733,6 +785,7 @@ function JobDetailView({ job, onBack, team, ticketsMap, showToast }){
   }, [job.id]);
 
   const ticket = ticketsMap[job.ticketRef];
+  const serviceLabel = ticket ? (SERVICE_LABELS[ticket.serviceType] || ticket.serviceType || "—") : "—";
 
   return (
     <div className="app" style={{ background: "#FFFFFF" }}>
@@ -742,19 +795,36 @@ function JobDetailView({ job, onBack, team, ticketsMap, showToast }){
         <span className="badge">{job.status}</span>
       </div>
 
+      {/* Job Summary Card */}
       <div className="card">
         <div className="card-title">📍 Job Details</div>
-        <div style={{ fontSize: 14 }}>{ticket?.address || job.address || "Address not set"}</div>
-        <div className="text-muted">{job.scheduledDate} · {job.scheduledTime || ""} · {job.team}</div>
-        {ticket?.clientName && <div className="text-muted">Client: {ticket.clientName}</div>}
-        {job.startedAt && (
-          <div className="text-green" style={{ marginTop: 4 }}>📥 Check In: {new Date(job.startedAt).toLocaleString()}</div>
+        {ticket ? (
+          <>
+            <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>{ticket.clientName || "—"}</div>
+            <div style={{ fontSize: 13, color: "#4A5A6E", marginBottom: 4 }}>
+              {serviceLabel} · {ticket.propertyType || "—"}
+            </div>
+            <div style={{ fontSize: 12, color: "#7A8DA0", marginBottom: 4 }}>
+              📞 {ticket.phone || "—"} · ✉️ {ticket.email || "—"}
+            </div>
+            <div style={{ fontSize: 12, color: "#7A8DA0" }}>
+              📍 {ticket.address || "—"}
+            </div>
+            <div style={{ fontSize: 12, color: "#7A8DA0", marginTop: 4 }}>
+              📅 {job.scheduledDate} · 🕐 {job.scheduledTime || "—"} · 👷 {job.team}
+            </div>
+            {job.startedAt && (
+              <div className="text-green" style={{ marginTop: 4 }}>📥 Check In: {new Date(job.startedAt).toLocaleString()}</div>
+            )}
+            {job.completedAt && (
+              <div className="text-green">📤 Check Out: {new Date(job.completedAt).toLocaleString()}</div>
+            )}
+            {job.slamDone && <div className="text-green" style={{ marginTop: 4 }}>✅ SLAM completed</div>}
+            {job.signedOff && <div className="text-green">✅ Signed off</div>}
+          </>
+        ) : (
+          <div style={{ color: "#7A8DA0" }}>No ticket details found</div>
         )}
-        {job.completedAt && (
-          <div className="text-green">📤 Check Out: {new Date(job.completedAt).toLocaleString()}</div>
-        )}
-        {job.slamDone && <div className="text-green" style={{ marginTop: 4 }}>✅ SLAM completed</div>}
-        {job.signedOff && <div className="text-green">✅ Signed off</div>}
       </div>
 
       {assessments.length > 0 && (
