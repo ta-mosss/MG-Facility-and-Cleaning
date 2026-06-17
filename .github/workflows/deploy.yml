@@ -1,0 +1,28 @@
+name: Deploy all apps to Firebase
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build Portal
+        run: npm run build --workspace=packages/portal
+      - name: Build Inspection
+        run: npm run build --workspace=packages/inspection
+      - name: Build Website
+        run: npm run build --workspace=packages/website
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+          projectId: test-bot-49f99
+          channelId: live
