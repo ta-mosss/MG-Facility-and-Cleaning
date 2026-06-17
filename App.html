@@ -95,10 +95,8 @@
     .status-closed{background:#F3F4F6;color:#6B7280;}
     .refresh-btn{background:transparent;border:none;color:#00C896;font-size:18px;cursor:pointer;padding:4px 8px;}
     .refresh-btn:hover{transform:rotate(90deg);transition:0.3s;}
-    .debug-box{background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:8px 12px;font-size:11px;color:#92400E;margin-bottom:10px;font-family:monospace;white-space:pre-wrap;word-break:break-all;}
-    .tab-bar{display:flex;gap:4px;background:#F8FAFC;border-radius:10px;padding:4px;margin-bottom:12px;}
-    .tab-btn{flex:1;padding:8px 12px;border:none;border-radius:8px;font-weight:600;font-size:12px;cursor:pointer;background:transparent;color:#7A8DA0;transition:0.15s;}
-    .tab-btn.active{background:#FFFFFF;color:#00C896;box-shadow:0 1px 3px rgba(0,0,0,0.08);}
+    .job-time{font-size:10px;color:#7A8DA0;display:flex;gap:12px;margin-top:2px;}
+    .job-time span{display:flex;align-items:center;gap:4px;}
     @media (max-width:400px){.stat-grid{grid-template-columns:1fr 1fr;}}
   </style>
 </head>
@@ -201,8 +199,6 @@ function SmartInspectionApp(){
   const [watchId, setWatchId] = useState(null);
   const [ticketsMap, setTicketsMap] = useState({});
   const [lastRefresh, setLastRefresh] = useState(Date.now());
-  const [debugInfo, setDebugInfo] = useState("");
-  const [activeTab, setActiveTab] = useState("today");
 
   const [slamItems, setSlamItems] = useState({
     "Floors": false, "Walls": false, "Windows": false, "Doors": false,
@@ -234,46 +230,52 @@ function SmartInspectionApp(){
     return () => unsub();
   }, []);
 
-  // Fetch ALL jobs for the team (not just today)
+  // Fetch ONLY active jobs (scheduled and in-progress) - hide completed/closed
   useEffect(() => {
     if(!team) {
       setLoading(false);
       return;
     }
     
-    console.log(`🔍 Fetching ALL jobs for team: ${team} from mgfc_jobs`);
+    console.log(`🔍 Fetching ACTIVE jobs for team: ${team} from mgfc_jobs`);
     
+    // Only get jobs that are NOT completed or closed
     const unsub = col("jobs")
       .where("team", "==", team)
       .onSnapshot(snap => {
-        const data = snap.docs.map(d => ({ 
+        const allData = snap.docs.map(d => ({ 
           id: d.id, 
           ...d.data() 
         }));
-        console.log(`📋 Found ${data.length} jobs for ${team}:`, data);
-        setAllJobs(data);
         
-        // Find active job (scheduled or in-progress)
-        const active = data.find(j => j.status === "in-progress" || j.status === "scheduled");
-        setActiveJob(active || null);
+        // Filter to ONLY active jobs (scheduled or in-progress)
+        const activeJobs = allData.filter(j => 
+          j.status === "scheduled" || 
+          j.status === "in-progress"
+        );
         
-        // Build debug info
-        let debug = `Total jobs: ${data.length}\n`;
-        data.forEach(j => {
-          debug += `  - ${j.ticketRef} | ${j.status} | ${j.scheduledDate}\n`;
-        });
-        setDebugInfo(debug);
+        console.log(`📋 Found ${allData.length} total, ${activeJobs.length} active jobs for ${team}`);
+        setAllJobs(activeJobs);
+        
+        // Find the active job the team is currently working on
+        const current = activeJobs.find(j => j.status === "in-progress");
+        if(current) {
+          setActiveJob(current);
+        } else {
+          // If no in-progress, show the first scheduled job as the active card
+          const firstScheduled = activeJobs.find(j => j.status === "scheduled");
+          setActiveJob(firstScheduled || null);
+        }
         
         setLoading(false);
       }, error => {
         console.error("Jobs fetch error:", error);
-        setDebugInfo(`❌ Error: ${error.message}`);
         setLoading(false);
       });
     return () => unsub();
   }, [team, lastRefresh]);
 
-  // Fetch check-ins
+  // Fetch check-ins for this team
   useEffect(() => {
     if(!team) return;
     const unsub = col("checkins")
@@ -319,14 +321,14 @@ function SmartInspectionApp(){
 
   const refreshJobs = () => {
     setLastRefresh(Date.now());
-    showToast("🔄 Refreshing jobs...", "success");
+    showToast("🔄 Refreshing...", "success");
   };
 
-  // Check In / Out
+  // Check In - records timestamp
   const handleCheckIn = async () => {
     if(!activeJob){ showToast("No active job assigned", "error"); return; }
     const loc = await getLocation();
-    await col("checkins").add({
+    const checkinData = {
       team,
       jobId: activeJob.id,
       ticketRef: activeJob.ticketRef || "N/A",
@@ -335,17 +337,19 @@ function SmartInspectionApp(){
       location: loc,
       verified: true,
       note: "Checked in"
-    });
+    };
+    await col("checkins").add(checkinData);
     await col("jobs").doc(activeJob.id).update({ status: "in-progress", startedAt: ts() });
-    setActiveJob({ ...activeJob, status: "in-progress" });
-    setAllJobs(allJobs.map(j => j.id === activeJob.id ? { ...j, status: "in-progress" } : j));
+    setActiveJob({ ...activeJob, status: "in-progress", startedAt: ts() });
+    setAllJobs(allJobs.map(j => j.id === activeJob.id ? { ...j, status: "in-progress", startedAt: ts() } : j));
     showToast(`✅ Checked in at ${new Date().toLocaleTimeString()}`);
   };
 
+  // Check Out - records timestamp
   const handleCheckOut = async () => {
     if(!activeJob){ showToast("No active job", "error"); return; }
     const loc = await getLocation();
-    await col("checkins").add({
+    const checkoutData = {
       team,
       jobId: activeJob.id,
       ticketRef: activeJob.ticketRef || "N/A",
@@ -354,11 +358,14 @@ function SmartInspectionApp(){
       location: loc,
       verified: true,
       note: "Checked out"
-    });
+    };
+    await col("checkins").add(checkoutData);
     await col("jobs").doc(activeJob.id).update({ status: "completed", completedAt: ts() });
-    setActiveJob({ ...activeJob, status: "completed" });
-    setAllJobs(allJobs.map(j => j.id === activeJob.id ? { ...j, status: "completed" } : j));
+    setActiveJob({ ...activeJob, status: "completed", completedAt: ts() });
+    // Remove from active jobs list since it's now completed
+    setAllJobs(allJobs.filter(j => j.id !== activeJob.id));
     showToast(`✅ Checked out at ${new Date().toLocaleTimeString()}`);
+    // Auto trigger sign-off
     setSelectedJobForSignoff(activeJob);
     setShowSignoff(true);
   };
@@ -424,7 +431,6 @@ function SmartInspectionApp(){
         });
       } catch(e) { console.log("Ticket update:", e); }
     }
-    setAllJobs(allJobs.map(j => j.id === selectedJobForSignoff.id ? { ...j, status: "closed", signedOff: true } : j));
     showToast("✅ Sign-off complete! Thank you.");
     setShowSignoff(false);
     setSelectedJobForSignoff(null);
@@ -466,14 +472,10 @@ function SmartInspectionApp(){
     />;
   }
 
-  const todayStr = new Date().toISOString().slice(0,10);
-  const todayJobs = allJobs.filter(j => j.scheduledDate === todayStr);
-  const allActiveJobs = allJobs.filter(j => j.status === "in-progress" || j.status === "scheduled");
-  const completedJobs = allJobs.filter(j => j.status === "completed" || j.status === "closed");
-  const inProgressJobs = allJobs.filter(j => j.status === "in-progress");
-
-  // Display jobs based on active tab
-  const displayJobs = activeTab === "today" ? todayJobs : allJobs;
+  // Only show active jobs count
+  const activeJobCount = allJobs.length;
+  const inProgressCount = allJobs.filter(j => j.status === "in-progress").length;
+  const scheduledCount = allJobs.filter(j => j.status === "scheduled").length;
 
   return (
     <div className="app" style={{ background: "#FFFFFF" }}>
@@ -483,7 +485,7 @@ function SmartInspectionApp(){
           <small>· {team}</small>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button className="refresh-btn" onClick={refreshJobs} title="Refresh jobs">⟳</button>
+          <button className="refresh-btn" onClick={refreshJobs} title="Refresh">⟳</button>
           <div className="badge">{tracking ? "🟢 GPS" : "🔴 GPS"}</div>
         </div>
       </div>
@@ -500,28 +502,27 @@ function SmartInspectionApp(){
         </span>
       </div>
 
-      {/* Debug Info */}
-      {debugInfo && (
-        <div className="debug-box">
-          <strong>🔍 Debug:</strong> {debugInfo}
-        </div>
-      )}
-
-      {/* Stats */}
+      {/* Stats - Only show active jobs */}
       <div className="stat-grid">
-        <div className="stat-box"><div className="stat-num">{allJobs.length}</div><div className="stat-label">Total Jobs</div></div>
-        <div className="stat-box"><div className="stat-num" style={{ color: "#F59E0B" }}>{inProgressJobs.length}</div><div className="stat-label">In Progress</div></div>
-        <div className="stat-box"><div className="stat-num" style={{ color: "#10B981" }}>{completedJobs.length}</div><div className="stat-label">Completed</div></div>
+        <div className="stat-box"><div className="stat-num">{activeJobCount}</div><div className="stat-label">Active Jobs</div></div>
+        <div className="stat-box"><div className="stat-num" style={{ color: "#F59E0B" }}>{inProgressCount}</div><div className="stat-label">In Progress</div></div>
+        <div className="stat-box"><div className="stat-num" style={{ color: "#0EA5E9" }}>{scheduledCount}</div><div className="stat-label">Scheduled</div></div>
       </div>
 
       {/* Active Job Card */}
-      {activeJob && activeJob.status !== "closed" && (
+      {activeJob && activeJob.status !== "completed" && activeJob.status !== "closed" && (
         <div className="card" style={{ borderColor: "#00C896", borderWidth: 2 }}>
-          <div className="card-title">🟢 Active Job</div>
+          <div className="card-title">🟢 Current Job</div>
           <div style={{ fontWeight: 600, fontSize: 16 }}>{activeJob.ticketRef || "No Ref"}</div>
           <div style={{ fontSize: 13, color: "#4A5A6E", margin: "4px 0" }}>
             {ticketsMap[activeJob.ticketRef]?.address || activeJob.address || "Address TBD"} · {activeJob.scheduledDate}
           </div>
+          {/* Show check-in time if in-progress */}
+          {activeJob.status === "in-progress" && activeJob.startedAt && (
+            <div style={{ fontSize: 12, color: "#10B981", margin: "4px 0" }}>
+              📥 Checked in: {new Date(activeJob.startedAt).toLocaleTimeString()}
+            </div>
+          )}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
             {activeJob.status === "scheduled" && (
               <>
@@ -539,35 +540,25 @@ function SmartInspectionApp(){
         </div>
       )}
 
-      {/* Jobs List with Tabs */}
+      {/* Active Jobs List - Only shows scheduled and in-progress */}
       <div className="card">
         <div className="card-title">
-          📋 Jobs
+          📋 Active Jobs
           <span style={{ fontSize: 11, color: "#7A8DA0", fontWeight: 400, marginLeft: "auto" }}>
-            {displayJobs.length} jobs
+            {activeJobCount} jobs
           </span>
         </div>
-        
-        {/* Tabs */}
-        <div className="tab-bar">
-          <button className={`tab-btn ${activeTab === "today" ? "active" : ""}`} onClick={() => setActiveTab("today")}>
-            📅 Today ({todayJobs.length})
-          </button>
-          <button className={`tab-btn ${activeTab === "all" ? "active" : ""}`} onClick={() => setActiveTab("all")}>
-            📋 All ({allJobs.length})
-          </button>
-        </div>
 
-        {displayJobs.length === 0 ? (
+        {activeJobCount === 0 ? (
           <div className="text-muted text-center" style={{ padding: 16 }}>
-            No jobs found for {team}
+            No active jobs assigned
             <br />
             <span style={{ fontSize: 11, color: "#7A8DA0" }}>
-              {activeTab === "today" ? "Try switching to 'All' tab" : "Schedule a job from the main portal"}
+              Check back later for new assignments
             </span>
           </div>
         ) : (
-          displayJobs.map(j => {
+          allJobs.map(j => {
             const ticket = ticketsMap[j.ticketRef];
             return (
               <div key={j.id} className="job-row" onClick={() => { setSelectedJobDetail(j); setShowJobDetail(true); }}>
@@ -576,15 +567,21 @@ function SmartInspectionApp(){
                   <div style={{ fontSize: 11, color: "#7A8DA0" }}>
                     {ticket?.clientName || j.clientName || "—"} · {ticket?.address || j.address || "—"}
                   </div>
-                  <div style={{ fontSize: 10, color: "#7A8DA0" }}>
-                    📅 {j.scheduledDate} {j.scheduledTime ? `🕐 ${j.scheduledTime}` : ""}
+                  <div className="job-time">
+                    {j.startedAt && (
+                      <span>📥 In: {new Date(j.startedAt).toLocaleTimeString()}</span>
+                    )}
+                    {j.completedAt && (
+                      <span>📤 Out: {new Date(j.completedAt).toLocaleTimeString()}</span>
+                    )}
+                    {j.scheduledTime && !j.startedAt && (
+                      <span>🕐 {j.scheduledTime}</span>
+                    )}
                   </div>
                 </div>
                 <div>
                   {j.status === "scheduled" && <span className="status-badge status-scheduled">⏳ Scheduled</span>}
                   {j.status === "in-progress" && <span className="status-badge status-progress">🔄 In Progress</span>}
-                  {j.status === "completed" && <span className="status-badge status-completed">✅ Completed</span>}
-                  {j.status === "closed" && <span className="status-badge status-closed">🔒 Closed</span>}
                 </div>
               </div>
             );
@@ -592,9 +589,9 @@ function SmartInspectionApp(){
         )}
       </div>
 
-      {/* Check-in Timeline */}
+      {/* Check-in Timeline - Shows history for the team */}
       <div className="card">
-        <div className="card-title">⏱️ Check-in Timeline</div>
+        <div className="card-title">⏱️ Your Check-ins</div>
         {checkins.length === 0 ? (
           <div className="text-muted text-center" style={{ padding: 12 }}>No check-ins yet</div>
         ) : (
@@ -602,8 +599,15 @@ function SmartInspectionApp(){
             <div key={c.id} className="timeline-item">
               <div className="timeline-icon">{c.type === "checkin" ? "📥" : "📤"}</div>
               <div className="timeline-content">
-                <div className="timeline-title">{c.type === "checkin" ? "Checked In" : "Checked Out"} · {c.ticketRef}</div>
-                <div className="timeline-meta">{c.timestamp ? new Date(c.timestamp).toLocaleString() : ""}</div>
+                <div className="timeline-title">
+                  {c.type === "checkin" ? "Checked In" : "Checked Out"} 
+                  <span style={{ fontSize: 11, color: "#7A8DA0", fontWeight: 400, marginLeft: 8 }}>
+                    {c.ticketRef}
+                  </span>
+                </div>
+                <div className="timeline-meta">
+                  {c.timestamp ? new Date(c.timestamp).toLocaleString() : ""}
+                </div>
                 {c.verified && <div className="timeline-verified">✅ GPS Verified</div>}
               </div>
             </div>
@@ -717,6 +721,7 @@ function SmartInspectionApp(){
   );
 }
 
+// ─── JOB DETAIL VIEW ───
 function JobDetailView({ job, onBack, team, ticketsMap, showToast }){
   const [assessments, setAssessments] = useState([]);
   const [signoffs, setSignoffs] = useState([]);
@@ -742,6 +747,12 @@ function JobDetailView({ job, onBack, team, ticketsMap, showToast }){
         <div style={{ fontSize: 14 }}>{ticket?.address || job.address || "Address not set"}</div>
         <div className="text-muted">{job.scheduledDate} · {job.scheduledTime || ""} · {job.team}</div>
         {ticket?.clientName && <div className="text-muted">Client: {ticket.clientName}</div>}
+        {job.startedAt && (
+          <div className="text-green" style={{ marginTop: 4 }}>📥 Check In: {new Date(job.startedAt).toLocaleString()}</div>
+        )}
+        {job.completedAt && (
+          <div className="text-green">📤 Check Out: {new Date(job.completedAt).toLocaleString()}</div>
+        )}
         {job.slamDone && <div className="text-green" style={{ marginTop: 4 }}>✅ SLAM completed</div>}
         {job.signedOff && <div className="text-green">✅ Signed off</div>}
       </div>
@@ -802,6 +813,7 @@ function JobDetailView({ job, onBack, team, ticketsMap, showToast }){
   );
 }
 
+// ─── MODAL ───
 function Modal({ title, onClose, wide, children }){
   return (
     <div className="modal-overlay" onClick={e => { if(e.target === e.currentTarget) onClose(); }}>
@@ -816,6 +828,7 @@ function Modal({ title, onClose, wide, children }){
   );
 }
 
+// ─── SIGNATURE PAD SETUP ───
 function SignatureSetup(){
   useEffect(() => {
     const canvas = document.getElementById("signature-pad");
@@ -848,6 +861,7 @@ function SignatureSetup(){
   return null;
 }
 
+// ─── ROOT ───
 function Root(){
   return (
     <>
