@@ -104,6 +104,12 @@
     .service-tag{display:inline-block;background:#E8ECF2;padding:2px 10px;border-radius:12px;font-size:11px;color:#4A5A6E;margin-top:4px;}
     .logo-container{display:flex;justify-content:center;margin-bottom:12px;}
     .logo-container img{max-width:100px;max-height:100px;object-fit:contain;border-radius:12px;}
+    .tab-bar{display:flex;gap:4px;background:#F8FAFC;border-radius:10px;padding:4px;margin-bottom:12px;}
+    .tab-btn{flex:1;padding:8px 12px;border:none;border-radius:8px;font-weight:600;font-size:12px;cursor:pointer;background:transparent;color:#7A8DA0;transition:0.15s;}
+    .tab-btn.active{background:#FFFFFF;color:#00C896;box-shadow:0 1px 3px rgba(0,0,0,0.08);}
+    .note-entry{background:#F8FAFC;border-radius:8px;padding:10px 12px;margin-bottom:8px;border-left:3px solid #00C896;}
+    .note-entry .note-text{font-size:13px;color:#1A2332;line-height:1.5;}
+    .note-entry .note-meta{font-size:10px;color:#7A8DA0;margin-top:4px;display:flex;gap:12px;}
     @media (max-width:400px){.stat-grid{grid-template-columns:1fr 1fr;}}
   </style>
 </head>
@@ -149,16 +155,14 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 function Toast({ msg, type }){ if(!msg) return null; return <div className={`toast ${type}`}>{msg}</div>; }
 
-// ─── SIGNATURE PAD COMPONENT (re-initializes on mount) ───
+// ─── SIGNATURE PAD ───
 function SignaturePad({ onReady }) {
   const canvasRef = useRef(null);
-  const [isDrawing, setIsDrawing] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
-    // Set canvas size to match CSS
     canvas.width = canvas.offsetWidth || 400;
     canvas.height = 120;
     ctx.lineWidth = 2;
@@ -196,7 +200,6 @@ function SignaturePad({ onReady }) {
     canvas.addEventListener("touchmove", move, { passive: false });
     canvas.addEventListener("touchend", stop);
 
-    // Clear function exposed via ref
     if (onReady) onReady(canvas);
 
     return () => {
@@ -297,7 +300,9 @@ function SmartInspectionApp(){
   const [ticketsMap, setTicketsMap] = useState({});
   const [lastRefresh, setLastRefresh] = useState(Date.now());
   const [signatureCanvas, setSignatureCanvas] = useState(null);
+  const [activeTab, setActiveTab] = useState("jobs"); // "jobs" | "notes"
 
+  // ─── SLAM STATE ───
   const [slamItems, setSlamItems] = useState({
     "Floors": false, "Walls": false, "Windows": false, "Doors": false,
     "Cabinets": false, "Countertops": false, "Appliances": false, "Plumbing": false,
@@ -306,6 +311,7 @@ function SmartInspectionApp(){
   const [slamNotes, setSlamNotes] = useState("");
   const [slamPhotos, setSlamPhotos] = useState([]);
 
+  // ─── SIGNOFF STATE ───
   const [signoffItems, setSignoffItems] = useState({
     "Floors clean": false, "Surfaces dusted": false, "Windows clean": false,
     "Kitchen sanitized": false, "Bathrooms clean": false, "Trash removed": false,
@@ -315,6 +321,11 @@ function SmartInspectionApp(){
   const [csat, setCsat] = useState(0);
   const [ces, setCes] = useState(0);
   const [signoffFeedback, setSignoffFeedback] = useState("");
+
+  // ─── NOTES STATE ───
+  const [fieldNotes, setFieldNotes] = useState([]);
+  const [newNoteText, setNewNoteText] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
 
   const fileInputRef = useRef(null);
 
@@ -328,24 +339,17 @@ function SmartInspectionApp(){
     return () => unsub();
   }, []);
 
-  // Fetch ONLY active jobs (scheduled and in-progress)
+  // Fetch active jobs
   useEffect(() => {
     if(!team) {
       setLoading(false);
       return;
     }
-    
     const unsub = col("jobs")
       .where("team", "==", team)
       .onSnapshot(snap => {
-        const allData = snap.docs.map(d => ({ 
-          id: d.id, 
-          ...d.data() 
-        }));
-        const activeJobs = allData.filter(j => 
-          j.status === "scheduled" || 
-          j.status === "in-progress"
-        );
+        const allData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const activeJobs = allData.filter(j => j.status === "scheduled" || j.status === "in-progress");
         setAllJobs(activeJobs);
         const current = activeJobs.find(j => j.status === "in-progress");
         if(current) {
@@ -362,7 +366,7 @@ function SmartInspectionApp(){
     return () => unsub();
   }, [team, lastRefresh]);
 
-  // Fetch check-ins for this team
+  // Fetch check-ins
   useEffect(() => {
     if(!team) return;
     const unsub = col("checkins")
@@ -374,6 +378,21 @@ function SmartInspectionApp(){
       });
     return () => unsub();
   }, [team]);
+
+  // Fetch field notes for the active job
+  useEffect(() => {
+    if(!activeJob) {
+      setFieldNotes([]);
+      return;
+    }
+    const unsub = col("field_notes")
+      .where("jobId", "==", activeJob.id)
+      .orderBy("timestamp", "desc")
+      .onSnapshot(snap => {
+        setFieldNotes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      });
+    return () => unsub();
+  }, [activeJob]);
 
   // GPS Tracking
   const startTracking = useCallback(async () => {
@@ -411,11 +430,11 @@ function SmartInspectionApp(){
     showToast("🔄 Refreshing...", "success");
   };
 
-  // Check In
+  // ─── CHECK IN ───
   const handleCheckIn = async () => {
     if(!activeJob){ showToast("No active job assigned", "error"); return; }
     const loc = await getLocation();
-    const checkinData = {
+    await col("checkins").add({
       team,
       jobId: activeJob.id,
       ticketRef: activeJob.ticketRef || "N/A",
@@ -424,19 +443,18 @@ function SmartInspectionApp(){
       location: loc,
       verified: true,
       note: "Checked in"
-    };
-    await col("checkins").add(checkinData);
+    });
     await col("jobs").doc(activeJob.id).update({ status: "in-progress", startedAt: ts() });
     setActiveJob({ ...activeJob, status: "in-progress", startedAt: ts() });
     setAllJobs(allJobs.map(j => j.id === activeJob.id ? { ...j, status: "in-progress", startedAt: ts() } : j));
     showToast(`✅ Checked in at ${new Date().toLocaleTimeString()}`);
   };
 
-  // Check Out
+  // ─── CHECK OUT ───
   const handleCheckOut = async () => {
     if(!activeJob){ showToast("No active job", "error"); return; }
     const loc = await getLocation();
-    const checkoutData = {
+    await col("checkins").add({
       team,
       jobId: activeJob.id,
       ticketRef: activeJob.ticketRef || "N/A",
@@ -445,8 +463,7 @@ function SmartInspectionApp(){
       location: loc,
       verified: true,
       note: "Checked out"
-    };
-    await col("checkins").add(checkoutData);
+    });
     await col("jobs").doc(activeJob.id).update({ status: "completed", completedAt: ts() });
     setActiveJob({ ...activeJob, status: "completed", completedAt: ts() });
     setAllJobs(allJobs.filter(j => j.id !== activeJob.id));
@@ -455,11 +472,11 @@ function SmartInspectionApp(){
     setShowSignoff(true);
   };
 
-  // SLAM
+  // ─── SLAM ───
   const handleSLAMSubmit = async () => {
     if(!activeJob){ showToast("No active job", "error"); return; }
     const loc = await getLocation();
-    const data = {
+    await col("assessments").add({
       jobId: activeJob.id,
       ticketRef: activeJob.ticketRef || "N/A",
       team,
@@ -469,8 +486,7 @@ function SmartInspectionApp(){
       location: loc,
       timestamp: ts(),
       type: "slam"
-    };
-    await col("assessments").add(data);
+    });
     await col("jobs").doc(activeJob.id).update({ slamDone: true, slamAt: ts() });
     showToast("✅ SLAM assessment saved");
     setShowSLAM(false);
@@ -479,21 +495,28 @@ function SmartInspectionApp(){
     setSlamPhotos([]);
   };
 
-  // Signoff - using signatureCanvas ref
+  // ─── SIGNOFF (checklist is now OPTIONAL) ───
   const handleSignoffSubmit = async () => {
     if(!selectedJobForSignoff){ showToast("No job selected", "error"); return; }
+    
+    // ✅ Checklist is now optional - just warn but don't block
     const done = Object.values(signoffItems).filter(Boolean).length;
     const total = Object.keys(signoffItems).length;
-    if(done < total){ showToast("Please complete all checklist items", "error"); return; }
+    if(done < total){
+      // Just show a warning, don't block
+      showToast(`⚠️ ${done}/${total} checklist items completed (optional)`, "info");
+    }
+    
     if(nps === 0){ showToast("Please provide NPS rating", "error"); return; }
     if(csat === 0){ showToast("Please provide CSAT rating", "error"); return; }
     if(ces === 0){ showToast("Please provide CES rating", "error"); return; }
+    
     const loc = await getLocation();
-    // Capture signature from the canvas
     let signatureData = null;
     if (signatureCanvas) {
       signatureData = signatureCanvas.toDataURL("image/png");
     }
+    
     const data = {
       jobId: selectedJobForSignoff.id,
       ticketRef: selectedJobForSignoff.ticketRef || "N/A",
@@ -529,6 +552,43 @@ function SmartInspectionApp(){
     setSignatureCanvas(null);
   };
 
+  // ─── NOTES ───
+  const handleAddNote = async () => {
+    if(!newNoteText.trim()){ showToast("Please enter a note", "error"); return; }
+    if(!activeJob){ showToast("No active job", "error"); return; }
+    setSavingNote(true);
+    try {
+      const noteData = {
+        jobId: activeJob.id,
+        ticketRef: activeJob.ticketRef || "N/A",
+        team,
+        text: newNoteText.trim(),
+        timestamp: ts(),
+        author: team
+      };
+      await col("field_notes").add(noteData);
+      // Also add to ticket notes for management visibility
+      if(activeJob.ticketRef){
+        await addNoteToTicket(activeJob.ticketRef, `📝 Field Note: ${newNoteText.trim()}`, "note", team);
+      }
+      setNewNoteText("");
+      showToast("✅ Note saved");
+    } catch(e) {
+      console.error(e);
+      showToast("Failed to save note", "error");
+    }
+    setSavingNote(false);
+  };
+
+  // Helper to add note to ticket (from main portal)
+  const addNoteToTicket = async (ref, txt, type = "note", author = "") => {
+    try {
+      const s = await col("tickets").doc(ref).get();
+      const notes = [...((s.data()||{}).notes||[]), {txt, at: ts(), type, author}];
+      await col("tickets").doc(ref).update({notes, updatedAt: ts()});
+    } catch(e) { console.error("Failed to add note:", e); }
+  };
+
   const handlePhotoUpload = (e) => {
     const files = Array.from(e.target.files);
     files.forEach(file => {
@@ -541,7 +601,7 @@ function SmartInspectionApp(){
     e.target.value = "";
   };
 
-  // Render ticket details helper
+  // ─── RENDER TICKET DETAILS ───
   const renderTicketDetails = (ticket) => {
     if(!ticket) return null;
     const serviceLabel = SERVICE_LABELS[ticket.serviceType] || ticket.serviceType || "—";
@@ -554,14 +614,6 @@ function SmartInspectionApp(){
         <div className="detail-item"><span className="label">Property:</span><span className="value">{ticket.propertyType || "—"}</span></div>
         <div className="detail-item"><span className="label">Priority:</span><span className="value">{ticket.priority || "Normal"}</span></div>
         <div className="detail-item" style={{gridColumn:"1/-1"}}><span className="label">Address:</span><span className="value">{ticket.address || "—"}</span></div>
-        {ticket.notes && ticket.notes.length > 0 && (
-          <div className="detail-item" style={{gridColumn:"1/-1"}}>
-            <span className="label">Notes:</span>
-            <span className="value" style={{fontWeight:400,fontSize:11}}>
-              {ticket.notes.filter(n => n.type !== "stage").slice(-1).map(n => n.txt).join("; ") || "—"}
-            </span>
-          </div>
-        )}
       </div>
     );
   };
@@ -585,7 +637,6 @@ function SmartInspectionApp(){
   const activeJobCount = allJobs.length;
   const inProgressCount = allJobs.filter(j => j.status === "in-progress").length;
   const scheduledCount = allJobs.filter(j => j.status === "scheduled").length;
-
   const activeTicket = activeJob ? ticketsMap[activeJob.ticketRef] : null;
 
   return (
@@ -620,136 +671,176 @@ function SmartInspectionApp(){
         <div className="stat-box"><div className="stat-num" style={{ color: "#0EA5E9" }}>{scheduledCount}</div><div className="stat-label">Scheduled</div></div>
       </div>
 
-      {/* Active Job Card with FULL Ticket Details */}
-      {activeJob && activeJob.status !== "completed" && activeJob.status !== "closed" && (
-        <div className="card" style={{ borderColor: "#00C896", borderWidth: 2 }}>
-          <div className="card-title">🟢 Current Job</div>
-          <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>{activeJob.ticketRef || "No Ref"}</div>
-          
-          {activeTicket ? (
-            <div style={{ marginBottom: 8 }}>
-              {renderTicketDetails(activeTicket)}
-            </div>
-          ) : (
-            <div style={{ fontSize: 13, color: "#7A8DA0", marginBottom: 8 }}>
-              {activeJob.address || "Address TBD"} · {activeJob.scheduledDate}
+      {/* Tab Bar: Jobs | Notes */}
+      <div className="tab-bar">
+        <button className={`tab-btn ${activeTab === "jobs" ? "active" : ""}`} onClick={() => setActiveTab("jobs")}>
+          📋 Jobs
+        </button>
+        <button className={`tab-btn ${activeTab === "notes" ? "active" : ""}`} onClick={() => setActiveTab("notes")}>
+          📝 Notes {fieldNotes.length > 0 ? `(${fieldNotes.length})` : ""}
+        </button>
+      </div>
+
+      {activeTab === "jobs" ? (
+        <>
+          {/* Active Job Card */}
+          {activeJob && activeJob.status !== "completed" && activeJob.status !== "closed" && (
+            <div className="card" style={{ borderColor: "#00C896", borderWidth: 2 }}>
+              <div className="card-title">🟢 Current Job</div>
+              <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>{activeJob.ticketRef || "No Ref"}</div>
+              {activeTicket ? (
+                <div style={{ marginBottom: 8 }}>{renderTicketDetails(activeTicket)}</div>
+              ) : (
+                <div style={{ fontSize: 13, color: "#7A8DA0", marginBottom: 8 }}>
+                  {activeJob.address || "Address TBD"} · {activeJob.scheduledDate}
+                </div>
+              )}
+              {activeJob.status === "in-progress" && activeJob.startedAt && (
+                <div style={{ fontSize: 12, color: "#10B981", margin: "4px 0" }}>
+                  📥 Checked in: {new Date(activeJob.startedAt).toLocaleTimeString()}
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+                {activeJob.status === "scheduled" && (
+                  <>
+                    <button className="btn btn-primary btn-sm" onClick={handleCheckIn}>📥 Check In</button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => setShowSLAM(true)}>📋 SLAM</button>
+                  </>
+                )}
+                {activeJob.status === "in-progress" && (
+                  <>
+                    <button className="btn btn-success btn-sm" onClick={handleCheckOut}>📤 Check Out</button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => setShowSLAM(true)}>📋 SLAM</button>
+                  </>
+                )}
+              </div>
             </div>
           )}
 
-          {activeJob.status === "in-progress" && activeJob.startedAt && (
-            <div style={{ fontSize: 12, color: "#10B981", margin: "4px 0" }}>
-              📥 Checked in: {new Date(activeJob.startedAt).toLocaleTimeString()}
+          {/* Active Jobs List */}
+          <div className="card">
+            <div className="card-title">
+              📋 Active Jobs
+              <span style={{ fontSize: 11, color: "#7A8DA0", fontWeight: 400, marginLeft: "auto" }}>
+                {activeJobCount} jobs
+              </span>
             </div>
-          )}
-          {activeJob.status === "completed" && activeJob.completedAt && (
-            <div style={{ fontSize: 12, color: "#10B981", margin: "4px 0" }}>
-              📤 Checked out: {new Date(activeJob.completedAt).toLocaleTimeString()}
-            </div>
-          )}
-
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
-            {activeJob.status === "scheduled" && (
-              <>
-                <button className="btn btn-primary btn-sm" onClick={handleCheckIn}>📥 Check In</button>
-                <button className="btn btn-secondary btn-sm" onClick={() => setShowSLAM(true)}>📋 SLAM</button>
-              </>
-            )}
-            {activeJob.status === "in-progress" && (
-              <>
-                <button className="btn btn-success btn-sm" onClick={handleCheckOut}>📤 Check Out</button>
-                <button className="btn btn-secondary btn-sm" onClick={() => setShowSLAM(true)}>📋 SLAM</button>
-              </>
+            {activeJobCount === 0 ? (
+              <div className="text-muted text-center" style={{ padding: 16 }}>
+                No active jobs assigned
+                <br />
+                <span style={{ fontSize: 11, color: "#7A8DA0" }}>Check back later for new assignments</span>
+              </div>
+            ) : (
+              allJobs.map(j => {
+                const ticket = ticketsMap[j.ticketRef];
+                return (
+                  <div key={j.id} className="job-row" onClick={() => { setSelectedJobDetail(j); setShowJobDetail(true); }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>{j.ticketRef || "N/A"}</div>
+                      <div style={{ fontSize: 11, color: "#7A8DA0" }}>
+                        {ticket?.clientName || j.clientName || "—"} · {ticket?.address || j.address || "—"}
+                      </div>
+                      {ticket?.serviceType && (
+                        <div style={{ fontSize: 10, color: "#4A5A6E", marginTop: 2 }}>
+                          {SERVICE_LABELS[ticket.serviceType] || ticket.serviceType}
+                        </div>
+                      )}
+                      <div className="job-time">
+                        {j.startedAt && <span>📥 In: {new Date(j.startedAt).toLocaleTimeString()}</span>}
+                        {j.completedAt && <span>📤 Out: {new Date(j.completedAt).toLocaleTimeString()}</span>}
+                        {j.scheduledTime && !j.startedAt && <span>🕐 {j.scheduledTime}</span>}
+                      </div>
+                    </div>
+                    <div>
+                      {j.status === "scheduled" && <span className="status-badge status-scheduled">⏳ Scheduled</span>}
+                      {j.status === "in-progress" && <span className="status-badge status-progress">🔄 In Progress</span>}
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
+
+          {/* Check-in Timeline */}
+          <div className="card">
+            <div className="card-title">⏱️ Your Check-ins</div>
+            {checkins.length === 0 ? (
+              <div className="text-muted text-center" style={{ padding: 12 }}>No check-ins yet</div>
+            ) : (
+              checkins.slice(0, 10).map(c => (
+                <div key={c.id} className="timeline-item">
+                  <div className="timeline-icon">{c.type === "checkin" ? "📥" : "📤"}</div>
+                  <div className="timeline-content">
+                    <div className="timeline-title">
+                      {c.type === "checkin" ? "Checked In" : "Checked Out"} 
+                      <span style={{ fontSize: 11, color: "#7A8DA0", fontWeight: 400, marginLeft: 8 }}>
+                        {c.ticketRef}
+                      </span>
+                    </div>
+                    <div className="timeline-meta">
+                      {c.timestamp ? new Date(c.timestamp).toLocaleString() : ""}
+                    </div>
+                    {c.verified && <div className="timeline-verified">✅ GPS Verified</div>}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      ) : (
+        /* ─── NOTES TAB ─── */
+        <div className="card">
+          <div className="card-title">📝 Field Notes</div>
+          <p style={{ fontSize: 12, color: "#7A8DA0", marginBottom: 12 }}>
+            Record updates, changes, or important information for management.
+          </p>
+          
+          {/* Add Note */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            <textarea 
+              className="field-input" 
+              value={newNoteText} 
+              onChange={e => setNewNoteText(e.target.value)} 
+              placeholder="Write a note..."
+              style={{ flex: 1, minHeight: 60 }}
+            />
+            <button 
+              className="btn btn-primary btn-sm" 
+              onClick={handleAddNote} 
+              disabled={savingNote || !newNoteText.trim()}
+              style={{ alignSelf: "flex-start" }}
+            >
+              {savingNote ? "…" : "Add"}
+            </button>
+          </div>
+
+          {/* Notes List */}
+          {fieldNotes.length === 0 ? (
+            <div className="text-muted text-center" style={{ padding: 16 }}>
+              No notes recorded yet
+            </div>
+          ) : (
+            fieldNotes.map(n => (
+              <div key={n.id} className="note-entry">
+                <div className="note-text">{n.text}</div>
+                <div className="note-meta">
+                  <span>👤 {n.author || team}</span>
+                  <span>🕐 {n.timestamp ? new Date(n.timestamp).toLocaleString() : ""}</span>
+                  {n.ticketRef && <span>📋 {n.ticketRef}</span>}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       )}
 
-      {/* Active Jobs List */}
-      <div className="card">
-        <div className="card-title">
-          📋 Active Jobs
-          <span style={{ fontSize: 11, color: "#7A8DA0", fontWeight: 400, marginLeft: "auto" }}>
-            {activeJobCount} jobs
-          </span>
-        </div>
-
-        {activeJobCount === 0 ? (
-          <div className="text-muted text-center" style={{ padding: 16 }}>
-            No active jobs assigned
-            <br />
-            <span style={{ fontSize: 11, color: "#7A8DA0" }}>
-              Check back later for new assignments
-            </span>
-          </div>
-        ) : (
-          allJobs.map(j => {
-            const ticket = ticketsMap[j.ticketRef];
-            return (
-              <div key={j.id} className="job-row" onClick={() => { setSelectedJobDetail(j); setShowJobDetail(true); }}>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 13 }}>{j.ticketRef || "N/A"}</div>
-                  <div style={{ fontSize: 11, color: "#7A8DA0" }}>
-                    {ticket?.clientName || j.clientName || "—"} · {ticket?.address || j.address || "—"}
-                  </div>
-                  {ticket?.serviceType && (
-                    <div style={{ fontSize: 10, color: "#4A5A6E", marginTop: 2 }}>
-                      {SERVICE_LABELS[ticket.serviceType] || ticket.serviceType}
-                    </div>
-                  )}
-                  <div className="job-time">
-                    {j.startedAt && (
-                      <span>📥 In: {new Date(j.startedAt).toLocaleTimeString()}</span>
-                    )}
-                    {j.completedAt && (
-                      <span>📤 Out: {new Date(j.completedAt).toLocaleTimeString()}</span>
-                    )}
-                    {j.scheduledTime && !j.startedAt && (
-                      <span>🕐 {j.scheduledTime}</span>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  {j.status === "scheduled" && <span className="status-badge status-scheduled">⏳ Scheduled</span>}
-                  {j.status === "in-progress" && <span className="status-badge status-progress">🔄 In Progress</span>}
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {/* Check-in Timeline */}
-      <div className="card">
-        <div className="card-title">⏱️ Your Check-ins</div>
-        {checkins.length === 0 ? (
-          <div className="text-muted text-center" style={{ padding: 12 }}>No check-ins yet</div>
-        ) : (
-          checkins.slice(0, 10).map(c => (
-            <div key={c.id} className="timeline-item">
-              <div className="timeline-icon">{c.type === "checkin" ? "📥" : "📤"}</div>
-              <div className="timeline-content">
-                <div className="timeline-title">
-                  {c.type === "checkin" ? "Checked In" : "Checked Out"} 
-                  <span style={{ fontSize: 11, color: "#7A8DA0", fontWeight: 400, marginLeft: 8 }}>
-                    {c.ticketRef}
-                  </span>
-                </div>
-                <div className="timeline-meta">
-                  {c.timestamp ? new Date(c.timestamp).toLocaleString() : ""}
-                </div>
-                {c.verified && <div className="timeline-verified">✅ GPS Verified</div>}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Modals */}
+      {/* ─── MODALS ─── */}
       {showSLAM && (
         <Modal title="📋 Pre-Cleaning SLAM" onClose={() => setShowSLAM(false)}>
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontWeight: 600, fontSize: 14, color: "#F59E0B" }}>⚠️ Document any existing damage or issues</div>
-            <div style={{ fontSize: 12, color: "#7A8DA0" }}>Check all items that are in GOOD condition. Leave unchecked if damaged or missing.</div>
+            <div style={{ fontSize: 12, color: "#7A8DA0" }}>Check items that are in GOOD condition. Leave unchecked if damaged or missing.</div>
           </div>
           <div className="checkbox-grid">
             {Object.keys(slamItems).map(k => (
@@ -782,9 +873,12 @@ function SmartInspectionApp(){
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontWeight: 600 }}>{selectedJobForSignoff.ticketRef}</div>
             <div className="text-muted">{ticketsMap[selectedJobForSignoff.ticketRef]?.address || selectedJobForSignoff.address}</div>
+            <div style={{ fontSize: 12, color: "#F59E0B", marginTop: 4 }}>
+              ℹ️ Checklist is optional - only complete what applies to this job
+            </div>
           </div>
           <div style={{ marginBottom: 12 }}>
-            <div className="card-title" style={{ fontSize: 13 }}>🧹 Cleaning Checklist</div>
+            <div className="card-title" style={{ fontSize: 13 }}>🧹 Cleaning Checklist <span style={{ fontWeight: 400, color: "#7A8DA0", fontSize: 11 }}>(optional)</span></div>
             <div className="checkbox-grid">
               {Object.keys(signoffItems).map(k => (
                 <label key={k} className="checkbox-item">
@@ -847,19 +941,41 @@ function SmartInspectionApp(){
   );
 }
 
-// ─── JOB DETAIL VIEW with full ticket info ───
+// ─── JOB DETAIL VIEW ───
 function JobDetailView({ job, onBack, team, ticketsMap, showToast, renderTicketDetails }){
   const [assessments, setAssessments] = useState([]);
   const [signoffs, setSignoffs] = useState([]);
+  const [notes, setNotes] = useState([]);
+  const [newNoteText, setNewNoteText] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
 
   useEffect(() => {
     const unsub1 = col("assessments").where("jobId", "==", job.id).onSnapshot(snap => setAssessments(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     const unsub2 = col("signoffs").where("jobId", "==", job.id).onSnapshot(snap => setSignoffs(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-    return () => { unsub1(); unsub2(); };
+    const unsub3 = col("field_notes").where("jobId", "==", job.id).orderBy("timestamp", "desc").onSnapshot(snap => setNotes(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    return () => { unsub1(); unsub2(); unsub3(); };
   }, [job.id]);
 
   const ticket = ticketsMap[job.ticketRef];
   const serviceLabel = ticket ? (SERVICE_LABELS[ticket.serviceType] || ticket.serviceType || "—") : "—";
+
+  const handleAddNote = async () => {
+    if(!newNoteText.trim()){ showToast("Please enter a note", "error"); return; }
+    setSavingNote(true);
+    try {
+      await col("field_notes").add({
+        jobId: job.id,
+        ticketRef: job.ticketRef || "N/A",
+        team,
+        text: newNoteText.trim(),
+        timestamp: ts(),
+        author: team
+      });
+      setNewNoteText("");
+      showToast("✅ Note saved");
+    } catch(e) { showToast("Failed to save note", "error"); }
+    setSavingNote(false);
+  };
 
   return (
     <div className="app" style={{ background: "#FFFFFF" }}>
@@ -897,6 +1013,41 @@ function JobDetailView({ job, onBack, team, ticketsMap, showToast, renderTicketD
           </>
         ) : (
           <div style={{ color: "#7A8DA0" }}>No ticket details found</div>
+        )}
+      </div>
+
+      {/* Notes Section */}
+      <div className="card">
+        <div className="card-title">📝 Field Notes</div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+          <textarea 
+            className="field-input" 
+            value={newNoteText} 
+            onChange={e => setNewNoteText(e.target.value)} 
+            placeholder="Add a note..."
+            style={{ flex: 1, minHeight: 50 }}
+          />
+          <button 
+            className="btn btn-primary btn-sm" 
+            onClick={handleAddNote} 
+            disabled={savingNote || !newNoteText.trim()}
+            style={{ alignSelf: "flex-start" }}
+          >
+            {savingNote ? "…" : "Add"}
+          </button>
+        </div>
+        {notes.length === 0 ? (
+          <div className="text-muted text-center" style={{ padding: 8 }}>No notes</div>
+        ) : (
+          notes.slice(0, 10).map(n => (
+            <div key={n.id} className="note-entry" style={{ marginBottom: 4 }}>
+              <div className="note-text">{n.text}</div>
+              <div className="note-meta">
+                <span>👤 {n.author || team}</span>
+                <span>🕐 {n.timestamp ? new Date(n.timestamp).toLocaleString() : ""}</span>
+              </div>
+            </div>
+          ))
         )}
       </div>
 
